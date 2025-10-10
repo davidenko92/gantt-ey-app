@@ -26,6 +26,13 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users 
           const userTasks = scheduledTasks.filter((task) => task.assignedUser === user.name);
           const totalDays = userTasks.reduce((sum, task) => sum + task.effort, 0);
 
+          // Contar tareas por prioridad
+          const priorityCount = {
+            Alta: userTasks.filter((t) => t.priority === 'Alta').length,
+            Media: userTasks.filter((t) => t.priority === 'Media').length,
+            Baja: userTasks.filter((t) => t.priority === 'Baja').length,
+          };
+
           return (
             <div
               key={user.id}
@@ -41,8 +48,34 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users 
               <div className="text-sm space-y-1" style={{ color: EY.gray }}>
                 <p>{userTasks.length} tareas asignadas</p>
                 <p>{totalDays} días de trabajo total</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {priorityCount.Alta > 0 && (
+                    <span
+                      className="px-2 py-1 rounded text-xs font-semibold text-white"
+                      style={{ backgroundColor: '#DC2626' }}
+                    >
+                      {priorityCount.Alta} Alta
+                    </span>
+                  )}
+                  {priorityCount.Media > 0 && (
+                    <span
+                      className="px-2 py-1 rounded text-xs font-semibold text-white"
+                      style={{ backgroundColor: '#F59E0B' }}
+                    >
+                      {priorityCount.Media} Media
+                    </span>
+                  )}
+                  {priorityCount.Baja > 0 && (
+                    <span
+                      className="px-2 py-1 rounded text-xs font-semibold text-white"
+                      style={{ backgroundColor: '#10B981' }}
+                    >
+                      {priorityCount.Baja} Baja
+                    </span>
+                  )}
+                </div>
                 {user.vacations.length > 0 && (
-                  <p className="text-orange-600">
+                  <p className="text-orange-600 mt-2">
                     <Calendar size={12} className="inline mr-1" />
                     {user.vacations.length} días de vacaciones
                   </p>

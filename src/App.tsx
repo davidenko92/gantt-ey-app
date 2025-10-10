@@ -11,7 +11,7 @@ import { GanttChart } from '@features/gantt/components/GanttChart';
 import { TaskTable } from '@features/gantt/components/TaskTable';
 import { UserSummary } from '@features/gantt/components/UserSummary';
 import { ConfigPanel } from '@features/gantt/components/ConfigPanel';
-import { Task, User } from '@types';
+import { Task, User, Priority } from '@types';
 
 const App: React.FC = () => {
   const EY = EY_COLORS;
@@ -69,6 +69,13 @@ const App: React.FC = () => {
 
   const removeUser = (userId: string) => {
     setUsers(users.filter((u) => u.id !== userId));
+  };
+
+  // Gestión de prioridades de tareas
+  const updateTaskPriority = (taskId: string, newPriority: Priority) => {
+    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)));
+    // Limpiar tareas planificadas para que se replanifiquen con la nueva prioridad
+    setScheduledTasks([]);
   };
 
   // Planificación automática
@@ -228,7 +235,12 @@ const App: React.FC = () => {
         )}
 
         {/* Resumen de tareas */}
-        <TaskTable tasks={tasks} scheduledTasks={scheduledTasks} users={users} />
+        <TaskTable
+          tasks={tasks}
+          scheduledTasks={scheduledTasks}
+          users={users}
+          onUpdatePriority={updateTaskPriority}
+        />
 
         {/* Resumen por usuario */}
         <UserSummary scheduledTasks={scheduledTasks} users={users} />

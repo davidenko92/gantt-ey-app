@@ -15,6 +15,12 @@ export const useTaskScheduler = ({ onScheduled, onError }: UseTaskSchedulerOptio
         return;
       }
 
+      // Ordenar tareas por prioridad: Alta -> Media -> Baja
+      const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
+      const sortedTasks = [...tasks].sort((a, b) => {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+
       // Inicializar workload de usuarios
       const userWorkload: Record<string, { nextDate: Date; totalDays: number }> = {};
       users.forEach((user) => {
@@ -22,7 +28,7 @@ export const useTaskScheduler = ({ onScheduled, onError }: UseTaskSchedulerOptio
       });
 
       // Asignar tareas balanceando carga
-      const scheduled = tasks.map((task) => {
+      const scheduled = sortedTasks.map((task) => {
         // Encontrar usuario con menor carga
         const availableUser = users.reduce((min, curr) => {
           const minLoad = userWorkload[min.name];

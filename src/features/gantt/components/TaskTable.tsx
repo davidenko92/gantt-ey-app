@@ -1,14 +1,20 @@
 import React from 'react';
 import { EY_COLORS } from '@features/gantt/constants';
-import { Task, User } from '@types';
+import { Task, User, Priority } from '@types';
 
 interface TaskTableProps {
   tasks: Task[];
   scheduledTasks: Task[];
   users: User[];
+  onUpdatePriority: (taskId: string, newPriority: Priority) => void;
 }
 
-export const TaskTable: React.FC<TaskTableProps> = ({ tasks, scheduledTasks, users }) => {
+export const TaskTable: React.FC<TaskTableProps> = ({
+  tasks,
+  scheduledTasks,
+  users,
+  onUpdatePriority,
+}) => {
   const EY = EY_COLORS;
 
   if (tasks.length === 0) return null;
@@ -32,6 +38,9 @@ export const TaskTable: React.FC<TaskTableProps> = ({ tasks, scheduledTasks, use
                 Esfuerzo
               </th>
               <th className="px-4 py-3 text-left font-semibold" style={{ color: EY.black }}>
+                Prioridad
+              </th>
+              <th className="px-4 py-3 text-left font-semibold" style={{ color: EY.black }}>
                 Asignado
               </th>
             </tr>
@@ -41,6 +50,13 @@ export const TaskTable: React.FC<TaskTableProps> = ({ tasks, scheduledTasks, use
               const scheduled = scheduledTasks.find((st) => st.id === task.id);
               const user = users.find((u) => u.name === scheduled?.assignedUser);
 
+              const priorityColor =
+                task.priority === 'Alta'
+                  ? '#DC2626'
+                  : task.priority === 'Media'
+                    ? '#F59E0B'
+                    : '#10B981';
+
               return (
                 <tr key={idx} className="border-t border-gray-200 hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono" style={{ color: EY.black }}>
@@ -48,6 +64,24 @@ export const TaskTable: React.FC<TaskTableProps> = ({ tasks, scheduledTasks, use
                   </td>
                   <td className="px-4 py-3" style={{ color: EY.black }}>
                     {task.effort} días
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={task.priority}
+                      onChange={(e) => onUpdatePriority(task.id, e.target.value as Priority)}
+                      className="px-2 py-1 rounded text-xs font-semibold text-white border-none cursor-pointer"
+                      style={{ backgroundColor: priorityColor }}
+                    >
+                      <option value="Alta" style={{ backgroundColor: '#DC2626' }}>
+                        Alta
+                      </option>
+                      <option value="Media" style={{ backgroundColor: '#F59E0B' }}>
+                        Media
+                      </option>
+                      <option value="Baja" style={{ backgroundColor: '#10B981' }}>
+                        Baja
+                      </option>
+                    </select>
                   </td>
                   <td className="px-4 py-3">
                     {scheduled?.assignedUser ? (

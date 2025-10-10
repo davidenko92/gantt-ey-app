@@ -1,7 +1,10 @@
+export type Priority = 'Alta' | 'Media' | 'Baja';
+
 export interface Task {
   id: string;
   name: string;
   effort: number;
+  priority: Priority;
   assignedUser?: string;
   startDate?: Date;
   endDate?: Date;
