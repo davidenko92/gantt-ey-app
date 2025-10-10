@@ -1,17 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Download, Calendar, Users, Settings, Play } from 'lucide-react';
-import { EY_COLORS, DEFAULT_USER_COLORS } from './features/gantt/constants';
-import { EYLogo } from './components/ui/EYLogo';
-import { Notification } from './components/ui/Notification';
-import { useNotification } from './hooks/useNotification';
-import { useFileUpload } from './hooks/useFileUpload';
-import { useTaskScheduler } from './hooks/useTaskScheduler';
-import { exportToExcel as exportGanttToExcel } from './features/gantt/services/excelExporter';
-import { GanttChart } from './features/gantt/components/GanttChart';
-import { TaskTable } from './features/gantt/components/TaskTable';
-import { UserSummary } from './features/gantt/components/UserSummary';
-import { ConfigPanel } from './features/gantt/components/ConfigPanel';
-import { Task, User } from './types';
+import { EY_COLORS, DEFAULT_USER_COLORS } from '@features/gantt/constants';
+import { EYLogo } from '@components/ui/EYLogo';
+import { Notification } from '@components/ui/Notification';
+import { useNotification } from '@hooks/useNotification';
+import { useFileUpload } from '@hooks/useFileUpload';
+import { useTaskScheduler } from '@hooks/useTaskScheduler';
+import { exportToExcel as exportGanttToExcel } from '@features/gantt/services/excelExporter';
+import { GanttChart } from '@features/gantt/components/GanttChart';
+import { TaskTable } from '@features/gantt/components/TaskTable';
+import { UserSummary } from '@features/gantt/components/UserSummary';
+import { ConfigPanel } from '@features/gantt/components/ConfigPanel';
+import { Task, User } from '@types';
 
 const App: React.FC = () => {
   const EY = EY_COLORS;

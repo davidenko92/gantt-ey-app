@@ -1,5 +1,5 @@
 import React from 'react';
-import { EY_COLORS } from '../../features/gantt/constants';
+import { EY_COLORS } from '@features/gantt/constants';
 import eyLogoIcon from '../../assets/ey_logo_icon_171166.ico';
 
 interface EYLogoProps {

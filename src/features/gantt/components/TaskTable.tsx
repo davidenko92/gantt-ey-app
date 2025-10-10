@@ -1,6 +1,6 @@
 import React from 'react';
-import { EY_COLORS } from '../constants';
-import { Task, User } from '../../../types';
+import { EY_COLORS } from '@features/gantt/constants';
+import { Task, User } from '@types';
 
 interface TaskTableProps {
   tasks: Task[];

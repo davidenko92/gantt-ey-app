@@ -1,4 +1,4 @@
-import { Task } from '../../../types';
+import { Task } from '@types';
 
 export const parseCsvToTasks = (csvText: string): Task[] => {
   const lines = csvText.split('\n').filter((line) => line.trim());

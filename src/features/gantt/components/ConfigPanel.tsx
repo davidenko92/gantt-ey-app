@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Calendar, Clock, Users, Settings } from 'lucide-react';
-import { EY_COLORS } from '../constants';
-import { User } from '../../../types';
+import { EY_COLORS } from '@features/gantt/constants';
+import { User } from '@types';
 
 interface ConfigPanelProps {
   startDate: Date;

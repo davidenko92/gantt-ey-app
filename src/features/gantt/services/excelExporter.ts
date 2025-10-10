@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Task, User } from '../../../types';
+import { Task, User } from '@types';
 
 export interface ExportOptions {
   scheduledTasks: Task[];

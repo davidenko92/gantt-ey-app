@@ -1,4 +1,4 @@
-import { User } from '../../../types';
+import { User } from '@types';
 
 export const dateUtils = {
   isWeekend: (date: Date) => [0, 6].includes(date.getDay()),

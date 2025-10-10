@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { dateUtils } from '../features/gantt/utils/dateUtils';
-import { Task, User } from '../types';
+import { dateUtils } from '@features/gantt/utils/dateUtils';
+import { Task, User } from '@types';
 
 interface UseTaskSchedulerOptions {
   onScheduled: (scheduledTasks: Task[]) => void;

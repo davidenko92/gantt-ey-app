@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { parseCsvToTasks } from '../features/gantt/services/csvProcessor';
-import { Task } from '../types';
+import { parseCsvToTasks } from '@features/gantt/services/csvProcessor';
+import { Task } from '@types';
 
 interface UseFileUploadOptions {
   onTasksLoaded: (tasks: Task[], fileName: string) => void;
