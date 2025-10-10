@@ -1,11 +1,11 @@
 {
   "scripts": {
-    "start": "react-scripts start",
+    "start": "craco start",
     "dev": "npm start",
-    "build": "react-scripts build",
+    "build": "craco build",
     "preview": "serve -s build -l 3000",
-    "test": "react-scripts test",
-    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test": "craco test",
+    "test:coverage": "craco test --coverage --watchAll=false",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx,css,json}'",
@@ -41,6 +41,7 @@
     "xlsx-style": "^0.8.13"
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
