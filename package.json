@@ -6,8 +6,8 @@
     "preview": "serve -s build -l 3000",
     "test": "craco test",
     "test:coverage": "craco test --coverage --watchAll=false",
-    "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx,css,json}'",
     "typecheck": "tsc --noEmit",
     "eject": "react-scripts eject"

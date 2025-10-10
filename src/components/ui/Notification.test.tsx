@@ -23,11 +23,9 @@ describe('Notification', () => {
   describe('Estilos por tipo', () => {
     it('debe aplicar estilos verdes para tipo "success"', () => {
       const mockOnClose = jest.fn();
-      const { container } = render(
-        <Notification message="Success!" type="success" onClose={mockOnClose} />
-      );
+      render(<Notification message="Success!" type="success" onClose={mockOnClose} />);
 
-      const notification = container.firstChild as HTMLElement;
+      const notification = screen.getByTestId('notification');
       expect(notification).toHaveClass('bg-green-50');
       expect(notification).toHaveClass('text-green-700');
       expect(notification).toHaveClass('border-green-400');
@@ -35,11 +33,9 @@ describe('Notification', () => {
 
     it('debe aplicar estilos rojos para tipo "error"', () => {
       const mockOnClose = jest.fn();
-      const { container } = render(
-        <Notification message="Error!" type="error" onClose={mockOnClose} />
-      );
+      render(<Notification message="Error!" type="error" onClose={mockOnClose} />);
 
-      const notification = container.firstChild as HTMLElement;
+      const notification = screen.getByTestId('notification');
       expect(notification).toHaveClass('bg-red-50');
       expect(notification).toHaveClass('text-red-700');
       expect(notification).toHaveClass('border-red-400');
@@ -47,11 +43,9 @@ describe('Notification', () => {
 
     it('debe aplicar estilos azules para tipo "info"', () => {
       const mockOnClose = jest.fn();
-      const { container } = render(
-        <Notification message="Info!" type="info" onClose={mockOnClose} />
-      );
+      render(<Notification message="Info!" type="info" onClose={mockOnClose} />);
 
-      const notification = container.firstChild as HTMLElement;
+      const notification = screen.getByTestId('notification');
       expect(notification).toHaveClass('bg-blue-50');
       expect(notification).toHaveClass('text-blue-700');
       expect(notification).toHaveClass('border-blue-400');
@@ -73,11 +67,9 @@ describe('Notification', () => {
   describe('Estructura y clases CSS', () => {
     it('debe tener las clases de posicionamiento fijo', () => {
       const mockOnClose = jest.fn();
-      const { container } = render(
-        <Notification message="Test" type="info" onClose={mockOnClose} />
-      );
+      render(<Notification message="Test" type="info" onClose={mockOnClose} />);
 
-      const notification = container.firstChild as HTMLElement;
+      const notification = screen.getByTestId('notification');
       expect(notification).toHaveClass('fixed');
       expect(notification).toHaveClass('top-4');
       expect(notification).toHaveClass('right-4');
@@ -86,11 +78,9 @@ describe('Notification', () => {
 
     it('debe tener clases de estilo común', () => {
       const mockOnClose = jest.fn();
-      const { container } = render(
-        <Notification message="Test" type="info" onClose={mockOnClose} />
-      );
+      render(<Notification message="Test" type="info" onClose={mockOnClose} />);
 
-      const notification = container.firstChild as HTMLElement;
+      const notification = screen.getByTestId('notification');
       expect(notification).toHaveClass('p-4');
       expect(notification).toHaveClass('rounded-lg');
       expect(notification).toHaveClass('shadow-lg');

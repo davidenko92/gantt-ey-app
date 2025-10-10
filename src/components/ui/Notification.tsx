@@ -9,6 +9,7 @@ interface NotificationProps {
 export const Notification: React.FC<NotificationProps> = ({ message, type, onClose }) => {
   return (
     <div
+      data-testid="notification"
       className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${
         type === 'success'
           ? 'bg-green-50 text-green-700 border-l-4 border-green-400'
