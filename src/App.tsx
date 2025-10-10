@@ -11,23 +11,7 @@ import { GanttChart } from './features/gantt/components/GanttChart';
 import { TaskTable } from './features/gantt/components/TaskTable';
 import { UserSummary } from './features/gantt/components/UserSummary';
 import { ConfigPanel } from './features/gantt/components/ConfigPanel';
-
-// Interfaces
-interface Task {
-  id: string;
-  name: string;
-  effort: number;
-  assignedUser?: string;
-  startDate?: Date;
-  endDate?: Date;
-}
-
-interface User {
-  id: string;
-  name: string;
-  color: string;
-  vacations: Date[];
-}
+import { Task, User } from './types';
 
 const App: React.FC = () => {
   const EY = EY_COLORS;
