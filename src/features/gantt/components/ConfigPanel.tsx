@@ -459,7 +459,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                               }
                               className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
-                            <span className="text-sm">Genera tareas de corrección</span>
+                            <span className="text-sm">Genera tareas de estabilización</span>
                           </label>
 
                           {team.config.triggersCorrection && (
@@ -470,7 +470,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                                     className="block text-sm font-medium mb-2"
                                     style={{ color: EY.black }}
                                   >
-                                    Equipo de Corrección
+                                    Equipo de Estabilización
                                   </label>
                                   <select
                                     value={team.config.correctionTeam || 'dev'}
@@ -495,7 +495,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                                     className="block text-sm font-medium mb-2"
                                     style={{ color: EY.black }}
                                   >
-                                    Prioridad de Corrección
+                                    Prioridad de Estabilización
                                   </label>
                                   <select
                                     value={team.config.correctionPriority}
@@ -574,7 +574,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                                 className="block text-sm font-medium mb-2"
                                 style={{ color: EY.black }}
                               >
-                                Días de Corrección
+                                Días de Estabilización
                               </label>
                               <input
                                 type="number"

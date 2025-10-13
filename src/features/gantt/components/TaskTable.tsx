@@ -180,13 +180,72 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
                           {teamEffort.enabled && (
                             <>
-                              {/* Esfuerzo de revisión */}
+                              {/* Nombre de la tarea */}
                               <div>
                                 <label
                                   className="block text-xs font-medium mb-1"
                                   style={{ color: EY.gray }}
                                 >
-                                  Revisión (días)
+                                  Tipo de Tarea
+                                </label>
+                                <input
+                                  type="text"
+                                  value={teamEffort.reviewTaskName || 'Revisión'}
+                                  onChange={(e) =>
+                                    onUpdateTaskTeamEffort(task.id, team.id, {
+                                      reviewTaskName: e.target.value,
+                                    })
+                                  }
+                                  className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none"
+                                  style={{ borderColor: team.color }}
+                                  placeholder="Ej: Auditoría, Testing, Revisión"
+                                />
+                              </div>
+
+                              {/* Prioridad de la tarea */}
+                              <div>
+                                <label
+                                  className="block text-xs font-medium mb-1"
+                                  style={{ color: EY.gray }}
+                                >
+                                  Prioridad
+                                </label>
+                                <select
+                                  value={teamEffort.reviewPriority || task.priority}
+                                  onChange={(e) =>
+                                    onUpdateTaskTeamEffort(task.id, team.id, {
+                                      reviewPriority: e.target.value as Priority,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 rounded text-xs font-semibold text-white border-none cursor-pointer"
+                                  style={{
+                                    backgroundColor:
+                                      (teamEffort.reviewPriority || task.priority) === 'Alta'
+                                        ? '#DC2626'
+                                        : (teamEffort.reviewPriority || task.priority) === 'Media'
+                                          ? '#F59E0B'
+                                          : '#10B981',
+                                  }}
+                                >
+                                  <option value="Alta" style={{ backgroundColor: '#DC2626' }}>
+                                    Alta
+                                  </option>
+                                  <option value="Media" style={{ backgroundColor: '#F59E0B' }}>
+                                    Media
+                                  </option>
+                                  <option value="Baja" style={{ backgroundColor: '#10B981' }}>
+                                    Baja
+                                  </option>
+                                </select>
+                              </div>
+
+                              {/* Esfuerzo */}
+                              <div>
+                                <label
+                                  className="block text-xs font-medium mb-1"
+                                  style={{ color: EY.gray }}
+                                >
+                                  Esfuerzo (días)
                                 </label>
                                 <input
                                   type="number"
@@ -203,13 +262,13 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                 />
                               </div>
 
-                              {/* Revisores */}
+                              {/* Usuarios asignados */}
                               <div>
                                 <label
                                   className="block text-xs font-medium mb-1"
                                   style={{ color: EY.gray }}
                                 >
-                                  Revisores
+                                  Usuarios
                                 </label>
                                 <MultiSelect
                                   options={teamUsers}
@@ -224,52 +283,152 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                 />
                               </div>
 
-                              {/* Corrección (si está configurado) */}
+                              {/* Tarea de seguimiento (estabilización/corrección, etc.) */}
                               {team.config.triggersCorrection && (
                                 <>
-                                  <div>
-                                    <label
-                                      className="block text-xs font-medium mb-1"
-                                      style={{ color: EY.gray }}
-                                    >
-                                      Corrección (días)
+                                  <div
+                                    className="border-t pt-3 mt-3"
+                                    style={{ borderColor: team.color + '40' }}
+                                  >
+                                    <label className="flex items-center gap-2 cursor-pointer mb-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={teamEffort.generateCorrection || false}
+                                        onChange={(e) =>
+                                          onUpdateTaskTeamEffort(task.id, team.id, {
+                                            generateCorrection: e.target.checked,
+                                          })
+                                        }
+                                        className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                                        style={{ accentColor: team.color }}
+                                      />
+                                      <span className="text-xs font-medium">
+                                        Generar tarea de seguimiento
+                                      </span>
                                     </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.5"
-                                      value={teamEffort.correctionEffort}
-                                      onChange={(e) =>
-                                        onUpdateTaskTeamEffort(task.id, team.id, {
-                                          correctionEffort: parseFloat(e.target.value) || 0,
-                                        })
-                                      }
-                                      className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none"
-                                      style={{ borderColor: team.color }}
-                                    />
-                                  </div>
 
-                                  <div>
-                                    <label
-                                      className="block text-xs font-medium mb-1"
-                                      style={{ color: EY.gray }}
-                                    >
-                                      Correctores
-                                    </label>
-                                    <MultiSelect
-                                      options={
-                                        teams.find((t) => t.id === team.config.correctionTeam)
-                                          ?.users || []
-                                      }
-                                      selected={teamEffort.correctionAssignedUsers}
-                                      onChange={(selectedNames) =>
-                                        onUpdateTaskTeamEffort(task.id, team.id, {
-                                          correctionAssignedUsers: selectedNames,
-                                        })
-                                      }
-                                      placeholder="Originales"
-                                      size="sm"
-                                    />
+                                    {teamEffort.generateCorrection && (
+                                      <>
+                                        {/* Nombre de la tarea de seguimiento */}
+                                        <div>
+                                          <label
+                                            className="block text-xs font-medium mb-1"
+                                            style={{ color: EY.gray }}
+                                          >
+                                            Tipo de Tarea
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={
+                                              teamEffort.correctionTaskName || 'Estabilización'
+                                            }
+                                            onChange={(e) =>
+                                              onUpdateTaskTeamEffort(task.id, team.id, {
+                                                correctionTaskName: e.target.value,
+                                              })
+                                            }
+                                            className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none mb-2"
+                                            style={{ borderColor: team.color }}
+                                            placeholder="Ej: Corrección, Estabilización"
+                                          />
+                                        </div>
+
+                                        {/* Prioridad de la tarea de seguimiento */}
+                                        <div>
+                                          <label
+                                            className="block text-xs font-medium mb-1"
+                                            style={{ color: EY.gray }}
+                                          >
+                                            Prioridad
+                                          </label>
+                                          <select
+                                            value={teamEffort.correctionPriority || task.priority}
+                                            onChange={(e) =>
+                                              onUpdateTaskTeamEffort(task.id, team.id, {
+                                                correctionPriority: e.target.value as Priority,
+                                              })
+                                            }
+                                            className="w-full px-2 py-1 rounded text-xs font-semibold text-white border-none cursor-pointer mb-2"
+                                            style={{
+                                              backgroundColor:
+                                                (teamEffort.correctionPriority || task.priority) ===
+                                                'Alta'
+                                                  ? '#DC2626'
+                                                  : (teamEffort.correctionPriority ||
+                                                        task.priority) === 'Media'
+                                                    ? '#F59E0B'
+                                                    : '#10B981',
+                                            }}
+                                          >
+                                            <option
+                                              value="Alta"
+                                              style={{ backgroundColor: '#DC2626' }}
+                                            >
+                                              Alta
+                                            </option>
+                                            <option
+                                              value="Media"
+                                              style={{ backgroundColor: '#F59E0B' }}
+                                            >
+                                              Media
+                                            </option>
+                                            <option
+                                              value="Baja"
+                                              style={{ backgroundColor: '#10B981' }}
+                                            >
+                                              Baja
+                                            </option>
+                                          </select>
+                                        </div>
+
+                                        {/* Esfuerzo */}
+                                        <div>
+                                          <label
+                                            className="block text-xs font-medium mb-1"
+                                            style={{ color: EY.gray }}
+                                          >
+                                            Esfuerzo (días)
+                                          </label>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={teamEffort.correctionEffort}
+                                            onChange={(e) =>
+                                              onUpdateTaskTeamEffort(task.id, team.id, {
+                                                correctionEffort: parseFloat(e.target.value) || 0,
+                                              })
+                                            }
+                                            className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none mb-2"
+                                            style={{ borderColor: team.color }}
+                                          />
+                                        </div>
+
+                                        {/* Usuarios */}
+                                        <div>
+                                          <label
+                                            className="block text-xs font-medium mb-1"
+                                            style={{ color: EY.gray }}
+                                          >
+                                            Usuarios
+                                          </label>
+                                          <MultiSelect
+                                            options={
+                                              teams.find((t) => t.id === team.config.correctionTeam)
+                                                ?.users || []
+                                            }
+                                            selected={teamEffort.correctionAssignedUsers}
+                                            onChange={(selectedNames) =>
+                                              onUpdateTaskTeamEffort(task.id, team.id, {
+                                                correctionAssignedUsers: selectedNames,
+                                              })
+                                            }
+                                            placeholder="Originales"
+                                            size="sm"
+                                          />
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </>
                               )}

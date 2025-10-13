@@ -22,7 +22,25 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
 
   const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
   const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
-  const totalDays = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+  // Generate array of business days only (Monday-Friday)
+  const businessDays: Date[] = [];
+  const currentDate = new Date(minDate);
+
+  while (currentDate <= maxDate) {
+    const dayOfWeek = currentDate.getDay();
+    // 0 = Sunday, 6 = Saturday
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      businessDays.push(new Date(currentDate));
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Create a map to find the position of each date in the business days array
+  const dateToPosition = new Map<string, number>();
+  businessDays.forEach((date, index) => {
+    dateToPosition.set(date.toDateString(), index);
+  });
 
   return (
     <div
@@ -38,9 +56,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
         <div className="flex mb-4">
           <div className="w-64 flex-shrink-0"></div>
           <div className="flex">
-            {Array.from({ length: totalDays }, (_, i) => {
-              const date = new Date(minDate);
-              date.setDate(date.getDate() + i);
+            {businessDays.map((date, i) => {
               return (
                 <div key={i} className="text-xs text-center border-l border-gray-200 w-10">
                   {date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
@@ -60,13 +76,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
             const user = users.find((u) => u.name === userName);
             const userEffort = task.effortByUser?.[userName] || 0;
 
-            const startOffset = Math.floor(
-              (task.startDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)
-            );
-            const duration =
-              Math.floor(
-                (task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)
-              ) + 1;
+            // Calculate position based on business days only
+            const startPosition = dateToPosition.get(task.startDate.toDateString()) ?? 0;
+            const endPosition = dateToPosition.get(task.endDate.toDateString()) ?? 0;
+            const duration = endPosition - startPosition + 1;
 
             // Get task type styling
             const getTaskTypeStyle = () => {
@@ -84,11 +97,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
                   pattern: 'diagonal-lines',
                   border: `2px solid ${team?.color || '#8B5CF6'}`,
                 };
-              } else if (task.taskType === 'correction') {
+              } else if (task.taskType === 'stabilization') {
+                // Stabilization tasks use the assigned user's color (developer)
                 return {
-                  backgroundColor: '#DC2626',
+                  backgroundColor: user?.color || '#10B981',
                   pattern: 'dots',
-                  border: '2px dashed #DC2626',
+                  border: `2px dashed ${user?.color || '#10B981'}`,
                 };
               }
               return {
@@ -111,7 +125,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
                     style={{
                       backgroundColor: taskStyle.backgroundColor,
                       border: taskStyle.border,
-                      marginLeft: startOffset * 40,
+                      marginLeft: startPosition * 40,
                       width: duration * 40,
                       minWidth: 80,
                       color: '#FFFFFF',
@@ -192,10 +206,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
               <div className="flex items-center gap-2">
                 <div
                   className="w-6 h-4 rounded"
-                  style={{ backgroundColor: '#DC2626', border: '2px dashed #DC2626' }}
+                  style={{ backgroundColor: '#10B981', border: '2px dashed #10B981' }}
                 ></div>
                 <span className="text-sm" style={{ color: EY.black }}>
-                  Corrección
+                  Estabilización
                 </span>
               </div>
             </div>

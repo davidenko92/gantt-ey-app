@@ -1,14 +1,14 @@
 [
   {
     "id": "user-1",
-    "name": "Alberto Ruiz",
+    "name": "Julian",
     "category": "Senior",
     "color": "#3B82F6",
     "vacations": ["2025-10-20", "2025-10-21"]
   },
   {
     "id": "user-2",
-    "name": "María García",
+    "name": "Pepe",
     "category": "Staff",
     "color": "#EF4444",
     "vacations": []

@@ -6,11 +6,17 @@ import { calculateEffortByUser } from './effortCalculator';
  * Creates separate task instances for:
  * - Development (one per assigned developer)
  * - Review (one per assigned reviewer per team)
- * - Correction (one per assigned corrector per team)
+ * - Stabilization (one per assigned developer after review)
  */
 export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
   const expandedTasks: Task[] = [];
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  // Track workload per team to enable round-robin auto-assignment
+  const teamWorkload = new Map<string, number[]>();
+  teams.forEach((team) => {
+    teamWorkload.set(team.id, new Array(team.users.length).fill(0));
+  });
 
   for (const task of tasks) {
     const devTeam = teamMap.get('dev');
@@ -45,13 +51,14 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
       if (!teamEffort?.enabled) continue;
 
       // 2a. Create review task instances (one per reviewer)
-      const reviewUsers = teamEffort.reviewAssignedUsers || [];
+      let reviewUsers = teamEffort.reviewAssignedUsers || [];
 
-      if (reviewUsers.length === 0) {
-        // Auto-assign to first available user in team
-        if (team.users.length > 0) {
-          reviewUsers.push(team.users[0].name);
-        }
+      if (reviewUsers.length === 0 && team.users.length > 0) {
+        // Auto-assign using round-robin to distribute workload evenly
+        const workload = teamWorkload.get(team.id) || [];
+        const minWorkloadIndex = workload.indexOf(Math.min(...workload));
+        reviewUsers = [team.users[minWorkloadIndex].name];
+        workload[minWorkloadIndex] += teamEffort.reviewEffort;
       }
 
       const reviewEffortByUser = calculateEffortByUser(
@@ -60,12 +67,16 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         team.users
       );
 
+      const reviewTaskName = teamEffort.reviewTaskName || 'Revisión';
+      const reviewPriority = teamEffort.reviewPriority || task.priority;
+
       reviewUsers.forEach((userName) => {
         expandedTasks.push({
           ...task,
           id: `${task.code}-${team.id}-review-${userName.replace(/\s+/g, '-')}`,
-          name: `${task.code} - Revisión ${team.name}`,
+          name: `${task.code} - ${reviewTaskName} ${team.name}`,
           effortBase: reviewEffortByUser[userName] || teamEffort.reviewEffort,
+          priority: reviewPriority,
           team: team.id,
           taskType: 'review',
           parentTaskId: task.id,
@@ -77,39 +88,52 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         });
       });
 
-      // 2b. Create correction task instances (if configured)
-      if (team.config.triggersCorrection && teamEffort.correctionEffort > 0) {
-        const correctionTeamId = team.config.correctionTeam || 'dev';
-        const correctionTeam = teamMap.get(correctionTeamId);
+      // 2b. Create follow-up task instances (if enabled and configured)
+      if (teamEffort.generateCorrection && teamEffort.correctionEffort > 0) {
+        const followUpTeamId = team.config.correctionTeam || 'dev';
+        const followUpTeam = teamMap.get(followUpTeamId);
 
-        if (!correctionTeam) {
-          console.warn(`Correction team ${correctionTeamId} not found`);
+        if (!followUpTeam) {
+          console.warn(`Follow-up team ${followUpTeamId} not found`);
           continue;
         }
 
-        const correctionUsers = teamEffort.correctionAssignedUsers || task.assignedUsers;
+        let followUpUsers = teamEffort.correctionAssignedUsers || [];
 
-        const correctionEffortByUser = calculateEffortByUser(
+        // If no users specified, use original developers
+        if (followUpUsers.length === 0) {
+          followUpUsers = task.assignedUsers;
+        }
+
+        const followUpEffortByUser = calculateEffortByUser(
           teamEffort.correctionEffort,
-          correctionUsers,
-          correctionTeam.users
+          followUpUsers,
+          followUpTeam.users
         );
 
-        correctionUsers.forEach((userName) => {
+        // Follow-up must wait for ALL review tasks from this team to complete
+        const allReviewTaskIds = reviewUsers.map(
+          (reviewerName) => `${task.code}-${team.id}-review-${reviewerName.replace(/\s+/g, '-')}`
+        );
+
+        const correctionTaskName = teamEffort.correctionTaskName || 'Estabilización';
+        const correctionPriority = teamEffort.correctionPriority || task.priority;
+
+        followUpUsers.forEach((userName) => {
           expandedTasks.push({
             ...task,
             id: `${task.code}-${team.id}-correction-${userName.replace(/\s+/g, '-')}`,
-            name: `${task.code} - Corrección ${team.name}`,
-            effortBase: correctionEffortByUser[userName] || teamEffort.correctionEffort,
-            priority: team.config.correctionPriority,
-            team: correctionTeamId,
-            taskType: 'correction',
+            name: `${task.code} - ${correctionTaskName} ${team.name}`,
+            effortBase: followUpEffortByUser[userName] || teamEffort.correctionEffort,
+            priority: correctionPriority,
+            team: followUpTeamId,
+            taskType: 'stabilization',
             parentTaskId: task.id,
             assignedUsers: [userName],
             effortByUser: {
-              [userName]: correctionEffortByUser[userName] || teamEffort.correctionEffort,
+              [userName]: followUpEffortByUser[userName] || teamEffort.correctionEffort,
             },
-            dependsOn: [`${task.code}-${team.id}-review-${reviewUsers[0].replace(/\s+/g, '-')}`],
+            dependsOn: allReviewTaskIds,
             canStartInParallel: false,
             interruptsCurrent: team.config.interruptsCurrent,
             status: 'blocked',
@@ -133,7 +157,12 @@ export function getDefaultTeamEffort(task: Task, team: Team) {
     enabled: false,
     reviewEffort,
     reviewAssignedUsers: [],
+    reviewTaskName: 'Revisión', // Default name
+    reviewPriority: task.priority, // Use task priority by default
     correctionEffort: team.config.defaultCorrectionDays || 1,
     correctionAssignedUsers: [],
+    correctionTaskName: 'Estabilización', // Default name
+    correctionPriority: task.priority, // Use task priority by default
+    generateCorrection: false, // Disabled by default
   };
 }

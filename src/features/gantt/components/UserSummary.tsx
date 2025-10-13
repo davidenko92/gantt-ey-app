@@ -59,7 +59,7 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users,
                   const taskTypeCount = {
                     development: userTasks.filter((t) => t.taskType === 'development').length,
                     review: userTasks.filter((t) => t.taskType === 'review').length,
-                    correction: userTasks.filter((t) => t.taskType === 'correction').length,
+                    stabilization: userTasks.filter((t) => t.taskType === 'stabilization').length,
                   };
 
                   // Count by priority
@@ -101,7 +101,7 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users,
                         {/* Task types */}
                         {(taskTypeCount.development > 0 ||
                           taskTypeCount.review > 0 ||
-                          taskTypeCount.correction > 0) && (
+                          taskTypeCount.stabilization > 0) && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {taskTypeCount.development > 0 && (
                               <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
@@ -113,9 +113,9 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users,
                                 {taskTypeCount.review} Rev
                               </span>
                             )}
-                            {taskTypeCount.correction > 0 && (
-                              <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
-                                {taskTypeCount.correction} Corr
+                            {taskTypeCount.stabilization > 0 && (
+                              <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+                                {taskTypeCount.stabilization} Estab
                               </span>
                             )}
                           </div>
@@ -150,10 +150,25 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users,
                         </div>
 
                         {user.vacations.length > 0 && (
-                          <p className="text-orange-600 mt-2 text-xs">
-                            <Calendar size={12} className="inline mr-1" />
-                            {user.vacations.length} días vacaciones
-                          </p>
+                          <div className="text-orange-600 mt-2 text-xs">
+                            <div className="flex items-center gap-1 mb-1">
+                              <Calendar size={12} className="inline" />
+                              <span className="font-semibold">Vacaciones:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {user.vacations.map((vacation, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs"
+                                >
+                                  {vacation.toLocaleDateString('es-ES', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                  })}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

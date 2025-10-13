@@ -1,6 +1,6 @@
 export type Priority = 'Alta' | 'Media' | 'Baja';
 export type UserCategory = 'Senior' | 'Staff';
-export type TaskType = 'development' | 'review' | 'correction';
+export type TaskType = 'development' | string; // 'development' is reserved, others are dynamic
 
 // Effort multipliers by category
 export const EFFORT_MULTIPLIERS: Record<UserCategory, number> = {
@@ -18,8 +18,8 @@ export interface Task {
   assignedUsers: string[]; // Array of user names assigned to this task
 
   // Task type and workflow
-  taskType?: TaskType; // 'development' | 'review' | 'correction'
-  parentTaskId?: string; // For derived tasks (reviews, corrections)
+  taskType?: TaskType; // 'development' | 'review' | 'stabilization'
+  parentTaskId?: string; // For derived tasks (reviews, stabilizations)
 
   // Team efforts configuration (editable from UI)
   teamEfforts: Record<string, TaskTeamEffort>;
@@ -38,10 +38,19 @@ export interface Task {
 
 export interface TaskTeamEffort {
   enabled: boolean; // Is this team active for this task?
-  reviewEffort: number; // Days for review/audit (base, before multipliers)
-  reviewAssignedUsers: string[]; // Reviewers assigned
-  correctionEffort: number; // Days for correction (base, before multipliers)
-  correctionAssignedUsers: string[]; // Users who will do the correction
+
+  // Primary task (review/audit/testing, etc.)
+  reviewEffort: number; // Days for primary task (base, before multipliers)
+  reviewAssignedUsers: string[]; // Users assigned to primary task
+  reviewTaskName?: string; // Custom name for this task (e.g., "Auditoría", "Testing")
+  reviewPriority?: Priority; // Custom priority for this task
+
+  // Follow-up task (stabilization/correction, etc.)
+  correctionEffort: number; // Days for follow-up task (base, before multipliers)
+  correctionAssignedUsers: string[]; // Users for follow-up task
+  correctionTaskName?: string; // Custom name for follow-up task (e.g., "Corrección", "Estabilización")
+  correctionPriority?: Priority; // Custom priority for follow-up task
+  generateCorrection: boolean; // Should this task generate a follow-up task?
 }
 
 export interface User {
@@ -67,14 +76,14 @@ export interface TeamConfig {
 
   // Behavior
   canWorkInParallel: boolean; // Can work while other teams work
-  triggersCorrection: boolean; // Generates correction task after review
-  correctionTeam?: string; // Team that does the correction
-  correctionPriority: Priority; // Priority of correction tasks
-  interruptsCurrent: boolean; // Interrupts current tasks of correction team
+  triggersCorrection: boolean; // Generates stabilization task after review
+  correctionTeam?: string; // Team that does the stabilization
+  correctionPriority: Priority; // Priority of stabilization tasks
+  interruptsCurrent: boolean; // Interrupts current tasks of stabilization team
 
   // Defaults
   defaultReviewEffortPercent?: number; // Default review effort as % of dev effort
-  defaultCorrectionDays?: number; // Default correction days
+  defaultCorrectionDays?: number; // Default stabilization days
 
   // Execution order
   executionOrder?: number; // Lower = executed first
