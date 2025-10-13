@@ -79,7 +79,10 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users,
                       style={{ borderColor: team.color + '40' }}
                     >
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: user.color }}></div>
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: user.color }}
+                        ></div>
                         <h5 className="font-semibold text-sm" style={{ color: EY.black }}>
                           {user.name}
                         </h5>

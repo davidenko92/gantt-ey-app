@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm outdated:*)"
+      "Bash(npm outdated:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

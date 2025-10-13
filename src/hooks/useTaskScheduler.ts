@@ -151,9 +151,10 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
 
           // Calculate start date considering dependencies and user availability
           const earliestStart = getEarliestStartDate(task, userName);
-          const taskStart = earliestStart > userWorkload[userName].nextDate
-            ? earliestStart
-            : userWorkload[userName].nextDate;
+          const taskStart =
+            earliestStart > userWorkload[userName].nextDate
+              ? earliestStart
+              : userWorkload[userName].nextDate;
 
           const taskEnd = dateUtils.addWorkingDays(taskStart, userEffort, user);
 

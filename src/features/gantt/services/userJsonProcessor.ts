@@ -106,7 +106,9 @@ export const parseJsonToUsers = (jsonText: string): { users: User[]; errors: str
 
     return { users, errors };
   } catch (error) {
-    errors.push(`Error al parsear JSON: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    errors.push(
+      `Error al parsear JSON: ${error instanceof Error ? error.message : 'Error desconocido'}`
+    );
     return { users: [], errors };
   }
 };

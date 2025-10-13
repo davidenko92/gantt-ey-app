@@ -43,7 +43,9 @@ export const parseCsvToTasks = (csvText: string): Task[] => {
 
       if (taskName && effortBase > 0) {
         // Generate a simple code from task name (e.g., "P001" from task number)
-        const taskCode = taskName.match(/^[A-Z0-9-]+/)?.[0] || `T${(extractedTasks.length + 1).toString().padStart(3, '0')}`;
+        const taskCode =
+          taskName.match(/^[A-Z0-9-]+/)?.[0] ||
+          `T${(extractedTasks.length + 1).toString().padStart(3, '0')}`;
 
         extractedTasks.push({
           id: `task-${extractedTasks.length + 1}`,

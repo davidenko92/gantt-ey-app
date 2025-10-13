@@ -151,7 +151,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
                   {/* Columnas dinámicas por equipo */}
                   {nonDevTeams.map((team) => {
-                    const teamEffort = task.teamEfforts[team.id] || getDefaultTeamEffort(task, team);
+                    const teamEffort =
+                      task.teamEfforts[team.id] || getDefaultTeamEffort(task, team);
                     const teamUsers = team.users;
 
                     return (
@@ -181,7 +182,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                             <>
                               {/* Esfuerzo de revisión */}
                               <div>
-                                <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                <label
+                                  className="block text-xs font-medium mb-1"
+                                  style={{ color: EY.gray }}
+                                >
                                   Revisión (días)
                                 </label>
                                 <input
@@ -201,7 +205,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
                               {/* Revisores */}
                               <div>
-                                <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                <label
+                                  className="block text-xs font-medium mb-1"
+                                  style={{ color: EY.gray }}
+                                >
                                   Revisores
                                 </label>
                                 <MultiSelect
@@ -221,7 +228,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                               {team.config.triggersCorrection && (
                                 <>
                                   <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                    <label
+                                      className="block text-xs font-medium mb-1"
+                                      style={{ color: EY.gray }}
+                                    >
                                       Corrección (días)
                                     </label>
                                     <input
@@ -240,13 +250,16 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                                   </div>
 
                                   <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                    <label
+                                      className="block text-xs font-medium mb-1"
+                                      style={{ color: EY.gray }}
+                                    >
                                       Correctores
                                     </label>
                                     <MultiSelect
                                       options={
-                                        teams.find((t) => t.id === team.config.correctionTeam)?.users ||
-                                        []
+                                        teams.find((t) => t.id === team.config.correctionTeam)
+                                          ?.users || []
                                       }
                                       selected={teamEffort.correctionAssignedUsers}
                                       onChange={(selectedNames) =>

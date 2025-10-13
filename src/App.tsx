@@ -47,9 +47,7 @@ const App: React.FC = () => {
   // Sync development team users with global users
   useEffect(() => {
     setTeams((prevTeams) =>
-      prevTeams.map((team) =>
-        team.id === 'dev' ? { ...team, users } : team
-      )
+      prevTeams.map((team) => (team.id === 'dev' ? { ...team, users } : team))
     );
   }, [users]);
 
@@ -63,12 +61,15 @@ const App: React.FC = () => {
         // Initialize teamEfforts for each task
         const tasksWithTeamEfforts = loadedTasks.map((task) => ({
           ...task,
-          teamEfforts: teams.reduce((acc, team) => {
-            if (team.id !== 'dev') {
-              acc[team.id] = getDefaultTeamEffort(task, team);
-            }
-            return acc;
-          }, {} as Record<string, TaskTeamEffort>),
+          teamEfforts: teams.reduce(
+            (acc, team) => {
+              if (team.id !== 'dev') {
+                acc[team.id] = getDefaultTeamEffort(task, team);
+              }
+              return acc;
+            },
+            {} as Record<string, TaskTeamEffort>
+          ),
         }));
 
         setTasks(tasksWithTeamEfforts);

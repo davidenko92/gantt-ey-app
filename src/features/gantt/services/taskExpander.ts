@@ -19,7 +19,11 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
     }
 
     // 1. Create development task instances (one per developer)
-    const devEffortByUser = calculateEffortByUser(task.effortBase, task.assignedUsers, devTeam.users);
+    const devEffortByUser = calculateEffortByUser(
+      task.effortBase,
+      task.assignedUsers,
+      devTeam.users
+    );
 
     task.assignedUsers.forEach((userName) => {
       expandedTasks.push({

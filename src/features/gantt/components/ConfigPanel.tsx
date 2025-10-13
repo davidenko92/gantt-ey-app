@@ -1,5 +1,16 @@
 import React, { useRef, useState } from 'react';
-import { Plus, Trash2, Calendar, Clock, Users, Settings, Upload, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Calendar,
+  Clock,
+  Users,
+  Settings,
+  Upload,
+  Shield,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { EY_COLORS } from '@features/gantt/constants';
 import { User, UserCategory, Team, Priority } from '@types';
 import { MultiSelect } from '@components/ui/MultiSelect';
@@ -279,289 +290,316 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
           </div>
 
           <div className="space-y-6">
-            {teams.filter((t) => t.id !== 'dev').map((team) => {
-              const isExpanded = expandedTeams.has(team.id);
-              const availableUsers = users.filter((u) =>
-                team.users.some((tu) => tu.id === u.id)
-              );
+            {teams
+              .filter((t) => t.id !== 'dev')
+              .map((team) => {
+                const isExpanded = expandedTeams.has(team.id);
+                const availableUsers = users.filter((u) => team.users.some((tu) => tu.id === u.id));
 
-              return (
-                <div
-                  key={team.id}
-                  className="border-2 rounded-xl shadow-sm"
-                  style={{ borderColor: EY.yellow, backgroundColor: EY.lightGray }}
-                >
-                  {/* Header colapsable */}
+                return (
                   <div
-                    className="flex items-center justify-between p-6 cursor-pointer hover:bg-yellow-50"
-                    onClick={() => toggleTeamExpansion(team.id)}
+                    key={team.id}
+                    className="border-2 rounded-xl shadow-sm"
+                    style={{ borderColor: EY.yellow, backgroundColor: EY.lightGray }}
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: team.color + '20', color: team.color }}
-                      >
-                        <Shield size={24} />
-                      </div>
-                      <div>
-                        <h5 className="font-semibold text-lg" style={{ color: EY.black }}>
-                          {team.name}
-                        </h5>
-                        <p className="text-sm" style={{ color: EY.gray }}>
-                          {availableUsers.length} usuarios asignados
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveTeam(team.id);
-                        }}
-                        className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                      {isExpanded ? (
-                        <ChevronUp size={24} style={{ color: EY.gray }} />
-                      ) : (
-                        <ChevronDown size={24} style={{ color: EY.gray }} />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contenido expandible */}
-                  {isExpanded && (
-                    <div className="px-6 pb-6 space-y-6">
-                      {/* Información básica */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                            Nombre del Equipo
-                          </label>
-                          <input
-                            type="text"
-                            value={team.name}
-                            onChange={(e) => onUpdateTeam(team.id, { name: e.target.value })}
-                            className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none"
-                            style={{ borderColor: EY.gray }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                            Color
-                          </label>
-                          <input
-                            type="color"
-                            value={team.color}
-                            onChange={(e) => onUpdateTeam(team.id, { color: e.target.value })}
-                            className="w-full h-10 rounded-lg border-2 cursor-pointer"
-                            style={{ borderColor: EY.gray }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Usuarios del equipo */}
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                          Usuarios del Equipo
-                        </label>
-                        <MultiSelect
-                          options={users}
-                          selected={team.users.map((u) => u.name)}
-                          onChange={(selectedNames) => {
-                            const selectedUsers = users.filter((u) =>
-                              selectedNames.includes(u.name)
-                            );
-                            onUpdateTeam(team.id, { users: selectedUsers });
-                          }}
-                          placeholder="Seleccionar usuarios..."
-                        />
-                      </div>
-
-                      {/* Dependencias */}
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                          Depende de Equipo
-                        </label>
-                        <select
-                          value={team.config.dependsOn || ''}
-                          onChange={(e) =>
-                            onUpdateTeam(team.id, {
-                              config: { ...team.config, dependsOn: e.target.value || undefined },
-                            })
-                          }
-                          className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
-                          style={{ borderColor: EY.gray }}
+                    {/* Header colapsable */}
+                    <div
+                      className="flex items-center justify-between p-6 cursor-pointer hover:bg-yellow-50"
+                      onClick={() => toggleTeamExpansion(team.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: team.color + '20', color: team.color }}
                         >
-                          <option value="">Ninguno</option>
-                          {teams
-                            .filter((t) => t.id !== team.id)
-                            .map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                        </select>
+                          <Shield size={24} />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-lg" style={{ color: EY.black }}>
+                            {team.name}
+                          </h5>
+                          <p className="text-sm" style={{ color: EY.gray }}>
+                            {availableUsers.length} usuarios asignados
+                          </p>
+                        </div>
                       </div>
-
-                      {/* Configuración de comportamiento */}
-                      <div className="space-y-4">
-                        <h6 className="font-semibold text-sm" style={{ color: EY.black }}>
-                          Configuración de Comportamiento
-                        </h6>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={team.config.canWorkInParallel}
-                            onChange={(e) =>
-                              onUpdateTeam(team.id, {
-                                config: { ...team.config, canWorkInParallel: e.target.checked },
-                              })
-                            }
-                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="text-sm">Puede trabajar en paralelo</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={team.config.triggersCorrection}
-                            onChange={(e) =>
-                              onUpdateTeam(team.id, {
-                                config: { ...team.config, triggersCorrection: e.target.checked },
-                              })
-                            }
-                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="text-sm">Genera tareas de corrección</span>
-                        </label>
-
-                        {team.config.triggersCorrection && (
-                          <>
-                            <div className="ml-8 space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                                  Equipo de Corrección
-                                </label>
-                                <select
-                                  value={team.config.correctionTeam || 'dev'}
-                                  onChange={(e) =>
-                                    onUpdateTeam(team.id, {
-                                      config: { ...team.config, correctionTeam: e.target.value },
-                                    })
-                                  }
-                                  className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
-                                  style={{ borderColor: EY.gray }}
-                                >
-                                  {teams.map((t) => (
-                                    <option key={t.id} value={t.id}>
-                                      {t.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                                  Prioridad de Corrección
-                                </label>
-                                <select
-                                  value={team.config.correctionPriority}
-                                  onChange={(e) =>
-                                    onUpdateTeam(team.id, {
-                                      config: {
-                                        ...team.config,
-                                        correctionPriority: e.target.value as Priority,
-                                      },
-                                    })
-                                  }
-                                  className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
-                                  style={{ borderColor: EY.gray }}
-                                >
-                                  <option value="Alta">Alta</option>
-                                  <option value="Media">Media</option>
-                                  <option value="Baja">Baja</option>
-                                </select>
-                              </div>
-
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={team.config.interruptsCurrent}
-                                  onChange={(e) =>
-                                    onUpdateTeam(team.id, {
-                                      config: { ...team.config, interruptsCurrent: e.target.checked },
-                                    })
-                                  }
-                                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                                />
-                                <span className="text-sm">Interrumpe tareas actuales</span>
-                              </label>
-                            </div>
-                          </>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveTeam(team.id);
+                          }}
+                          className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                        {isExpanded ? (
+                          <ChevronUp size={24} style={{ color: EY.gray }} />
+                        ) : (
+                          <ChevronDown size={24} style={{ color: EY.gray }} />
                         )}
                       </div>
+                    </div>
 
-                      {/* Valores por defecto */}
-                      <div className="space-y-4">
-                        <h6 className="font-semibold text-sm" style={{ color: EY.black }}>
-                          Valores por Defecto
-                        </h6>
-
+                    {/* Contenido expandible */}
+                    {isExpanded && (
+                      <div className="px-6 pb-6 space-y-6">
+                        {/* Información básica */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                              Esfuerzo Revisión (% del desarrollo)
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: EY.black }}
+                            >
+                              Nombre del Equipo
                             </label>
                             <input
-                              type="number"
-                              min="0"
-                              max="200"
-                              value={team.config.defaultReviewEffortPercent || 100}
-                              onChange={(e) =>
-                                onUpdateTeam(team.id, {
-                                  config: {
-                                    ...team.config,
-                                    defaultReviewEffortPercent: parseInt(e.target.value) || 100,
-                                  },
-                                })
-                              }
+                              type="text"
+                              value={team.name}
+                              onChange={(e) => onUpdateTeam(team.id, { name: e.target.value })}
                               className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none"
                               style={{ borderColor: EY.gray }}
                             />
                           </div>
-
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: EY.black }}>
-                              Días de Corrección
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: EY.black }}
+                            >
+                              Color
                             </label>
                             <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={team.config.defaultCorrectionDays || 1}
-                              onChange={(e) =>
-                                onUpdateTeam(team.id, {
-                                  config: {
-                                    ...team.config,
-                                    defaultCorrectionDays: parseFloat(e.target.value) || 1,
-                                  },
-                                })
-                              }
-                              className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none"
+                              type="color"
+                              value={team.color}
+                              onChange={(e) => onUpdateTeam(team.id, { color: e.target.value })}
+                              className="w-full h-10 rounded-lg border-2 cursor-pointer"
                               style={{ borderColor: EY.gray }}
                             />
                           </div>
                         </div>
+
+                        {/* Usuarios del equipo */}
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: EY.black }}
+                          >
+                            Usuarios del Equipo
+                          </label>
+                          <MultiSelect
+                            options={users}
+                            selected={team.users.map((u) => u.name)}
+                            onChange={(selectedNames) => {
+                              const selectedUsers = users.filter((u) =>
+                                selectedNames.includes(u.name)
+                              );
+                              onUpdateTeam(team.id, { users: selectedUsers });
+                            }}
+                            placeholder="Seleccionar usuarios..."
+                          />
+                        </div>
+
+                        {/* Dependencias */}
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: EY.black }}
+                          >
+                            Depende de Equipo
+                          </label>
+                          <select
+                            value={team.config.dependsOn || ''}
+                            onChange={(e) =>
+                              onUpdateTeam(team.id, {
+                                config: { ...team.config, dependsOn: e.target.value || undefined },
+                              })
+                            }
+                            className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
+                            style={{ borderColor: EY.gray }}
+                          >
+                            <option value="">Ninguno</option>
+                            {teams
+                              .filter((t) => t.id !== team.id)
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+
+                        {/* Configuración de comportamiento */}
+                        <div className="space-y-4">
+                          <h6 className="font-semibold text-sm" style={{ color: EY.black }}>
+                            Configuración de Comportamiento
+                          </h6>
+
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={team.config.canWorkInParallel}
+                              onChange={(e) =>
+                                onUpdateTeam(team.id, {
+                                  config: { ...team.config, canWorkInParallel: e.target.checked },
+                                })
+                              }
+                              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">Puede trabajar en paralelo</span>
+                          </label>
+
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={team.config.triggersCorrection}
+                              onChange={(e) =>
+                                onUpdateTeam(team.id, {
+                                  config: { ...team.config, triggersCorrection: e.target.checked },
+                                })
+                              }
+                              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">Genera tareas de corrección</span>
+                          </label>
+
+                          {team.config.triggersCorrection && (
+                            <>
+                              <div className="ml-8 space-y-4">
+                                <div>
+                                  <label
+                                    className="block text-sm font-medium mb-2"
+                                    style={{ color: EY.black }}
+                                  >
+                                    Equipo de Corrección
+                                  </label>
+                                  <select
+                                    value={team.config.correctionTeam || 'dev'}
+                                    onChange={(e) =>
+                                      onUpdateTeam(team.id, {
+                                        config: { ...team.config, correctionTeam: e.target.value },
+                                      })
+                                    }
+                                    className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
+                                    style={{ borderColor: EY.gray }}
+                                  >
+                                    {teams.map((t) => (
+                                      <option key={t.id} value={t.id}>
+                                        {t.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label
+                                    className="block text-sm font-medium mb-2"
+                                    style={{ color: EY.black }}
+                                  >
+                                    Prioridad de Corrección
+                                  </label>
+                                  <select
+                                    value={team.config.correctionPriority}
+                                    onChange={(e) =>
+                                      onUpdateTeam(team.id, {
+                                        config: {
+                                          ...team.config,
+                                          correctionPriority: e.target.value as Priority,
+                                        },
+                                      })
+                                    }
+                                    className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none cursor-pointer"
+                                    style={{ borderColor: EY.gray }}
+                                  >
+                                    <option value="Alta">Alta</option>
+                                    <option value="Media">Media</option>
+                                    <option value="Baja">Baja</option>
+                                  </select>
+                                </div>
+
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={team.config.interruptsCurrent}
+                                    onChange={(e) =>
+                                      onUpdateTeam(team.id, {
+                                        config: {
+                                          ...team.config,
+                                          interruptsCurrent: e.target.checked,
+                                        },
+                                      })
+                                    }
+                                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm">Interrumpe tareas actuales</span>
+                                </label>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Valores por defecto */}
+                        <div className="space-y-4">
+                          <h6 className="font-semibold text-sm" style={{ color: EY.black }}>
+                            Valores por Defecto
+                          </h6>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label
+                                className="block text-sm font-medium mb-2"
+                                style={{ color: EY.black }}
+                              >
+                                Esfuerzo Revisión (% del desarrollo)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="200"
+                                value={team.config.defaultReviewEffortPercent || 100}
+                                onChange={(e) =>
+                                  onUpdateTeam(team.id, {
+                                    config: {
+                                      ...team.config,
+                                      defaultReviewEffortPercent: parseInt(e.target.value) || 100,
+                                    },
+                                  })
+                                }
+                                className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none"
+                                style={{ borderColor: EY.gray }}
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                className="block text-sm font-medium mb-2"
+                                style={{ color: EY.black }}
+                              >
+                                Días de Corrección
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={team.config.defaultCorrectionDays || 1}
+                                onChange={(e) =>
+                                  onUpdateTeam(team.id, {
+                                    config: {
+                                      ...team.config,
+                                      defaultCorrectionDays: parseFloat(e.target.value) || 1,
+                                    },
+                                  })
+                                }
+                                className="w-full border-2 rounded-lg px-4 py-2 focus:outline-none"
+                                style={{ borderColor: EY.gray }}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
 
             {teams.filter((t) => t.id !== 'dev').length === 0 && (
               <div

@@ -12,9 +12,7 @@ export function validateTeamDependencies(teams: Team[]): { valid: boolean; error
   for (const team of teams) {
     if (team.config.dependsOn) {
       if (!teamMap.has(team.config.dependsOn)) {
-        errors.push(
-          `El equipo '${team.name}' depende de '${team.config.dependsOn}' que no existe`
-        );
+        errors.push(`El equipo '${team.name}' depende de '${team.config.dependsOn}' que no existe`);
       }
     }
 
