@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { dateUtils } from '@features/gantt/utils/dateUtils';
-import { calculateEffortByUser } from '@features/gantt/services/effortCalculator';
-import { Task, User } from '@types';
+import { expandTasksWithTeams } from '@features/gantt/services/taskExpander';
+import { validateTeamDependencies } from '@features/gantt/services/dependencyValidator';
+import { Task, User, Team } from '@types';
 
 interface UseTaskSchedulerOptions {
   onScheduled: (scheduledTasks: Task[]) => void;
@@ -11,18 +12,18 @@ interface UseTaskSchedulerOptions {
 
 export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSchedulerOptions) => {
   const scheduleTasks = useCallback(
-    (tasks: Task[], users: User[], startDate: Date) => {
+    (tasks: Task[], users: User[], teams: Team[], startDate: Date) => {
+      // Validations
       if (tasks.length === 0 || users.length === 0) {
         onError('Necesitas tareas y usuarios');
         return;
       }
 
-      // Check for tasks without assigned users
-      const unassignedTasks = tasks.filter((t) => t.assignedUsers.length === 0);
-      if (unassignedTasks.length > 0 && onWarning) {
-        onWarning(
-          `⚠️ ${unassignedTasks.length} tarea(s) sin asignar serán asignadas automáticamente al primer usuario disponible`
-        );
+      // Validate team dependencies
+      const validation = validateTeamDependencies(teams);
+      if (!validation.valid) {
+        onError(`Configuración de equipos inválida:\n${validation.errors.join('\n')}`);
+        return;
       }
 
       // Validate that assigned users exist
@@ -41,45 +42,119 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         return;
       }
 
-      // Sort tasks by priority: Alta -> Media -> Baja
+      // Expand tasks into workflow phases (dev, review, correction)
+      const expandedTasks = expandTasksWithTeams(tasks, teams);
+
+      // Sort by priority and interruption capability
       const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
-      const sortedTasks = [...tasks].sort((a, b) => {
+      const sortedTasks = [...expandedTasks].sort((a, b) => {
+        // First, sort by interruption capability (interrupts first)
+        if (a.interruptsCurrent && !b.interruptsCurrent) return -1;
+        if (!a.interruptsCurrent && b.interruptsCurrent) return 1;
+
+        // Then by priority
         return priorityOrder[a.priority] - priorityOrder[b.priority];
       });
 
-      // Initialize user workload
-      const userWorkload: Record<string, { nextDate: Date; totalDays: number }> = {};
+      // Initialize user workload per team
+      const userWorkload: Record<
+        string,
+        { nextDate: Date; totalDays: number; currentTask: Task | null }
+      > = {};
       users.forEach((user) => {
-        userWorkload[user.name] = { nextDate: new Date(startDate), totalDays: 0 };
+        userWorkload[user.name] = {
+          nextDate: new Date(startDate),
+          totalDays: 0,
+          currentTask: null,
+        };
       });
 
+      // Track task completion status
+      const completedTasks = new Set<string>();
       const scheduled: Task[] = [];
+      const blocked: Task[] = [];
 
-      sortedTasks.forEach((task) => {
-        let taskAssignedUsers = [...task.assignedUsers];
+      // Helper to check if dependencies are met
+      const canStartTask = (task: Task): boolean => {
+        if (!task.dependsOn || task.dependsOn.length === 0) return true;
 
-        // Auto-assign unassigned tasks to first available user
-        if (taskAssignedUsers.length === 0) {
-          const availableUser = users.reduce((min, curr) => {
-            const minLoad = userWorkload[min.name];
-            const currLoad = userWorkload[curr.name];
-            return minLoad.totalDays <= currLoad.totalDays ? min : curr;
+        return task.dependsOn.every((depId) => completedTasks.has(depId));
+      };
+
+      // Helper to get earliest start date considering dependencies
+      const getEarliestStartDate = (task: Task, userName: string): Date => {
+        let earliestDate = new Date(userWorkload[userName].nextDate);
+
+        if (task.dependsOn && task.dependsOn.length > 0) {
+          task.dependsOn.forEach((depId) => {
+            const depTask = scheduled.find((t) => t.id === depId);
+            if (depTask && depTask.endDate) {
+              const dayAfterDep = new Date(depTask.endDate);
+              dayAfterDep.setDate(dayAfterDep.getDate() + 1);
+
+              if (dayAfterDep > earliestDate) {
+                earliestDate = dayAfterDep;
+              }
+            }
           });
-          taskAssignedUsers = [availableUser.name];
         }
 
-        // Calculate effort for each assigned user (with division + multipliers)
-        const effortByUser = calculateEffortByUser(task.effortBase, taskAssignedUsers, users);
+        return earliestDate;
+      };
 
-        // Create a scheduled task for each assigned user
-        taskAssignedUsers.forEach((userName) => {
+      // Schedule tasks considering dependencies and parallel execution
+      let pendingTasks = [...sortedTasks];
+      let maxIterations = 1000; // Safety limit
+      let iteration = 0;
+
+      while (pendingTasks.length > 0 && iteration < maxIterations) {
+        iteration++;
+        let progressMade = false;
+
+        for (let i = pendingTasks.length - 1; i >= 0; i--) {
+          const task = pendingTasks[i];
+
+          // Check if task can start
+          if (!canStartTask(task)) {
+            continue;
+          }
+
+          // Get assigned user
+          const userName = task.assignedUsers[0];
+          if (!userName) {
+            onWarning?.(`Tarea ${task.id} sin usuario asignado, omitiendo`);
+            pendingTasks.splice(i, 1);
+            progressMade = true;
+            continue;
+          }
+
           const user = users.find((u) => u.name === userName);
-          if (!user) return;
+          if (!user) {
+            onWarning?.(`Usuario ${userName} no encontrado para tarea ${task.id}`);
+            pendingTasks.splice(i, 1);
+            progressMade = true;
+            continue;
+          }
 
-          const userEffort = effortByUser[userName] || task.effortBase;
+          const userEffort = task.effortByUser?.[userName] || task.effortBase;
 
-          // Calculate task dates based on user's availability
-          const taskStart = new Date(userWorkload[userName].nextDate);
+          // Handle task interruption
+          if (task.interruptsCurrent && userWorkload[userName].currentTask) {
+            // Interrupt current task, schedule interrupting task first
+            const currentTask = userWorkload[userName].currentTask;
+            if (currentTask) {
+              // Push interrupted task back to pending
+              blocked.push(currentTask);
+              userWorkload[userName].currentTask = null;
+            }
+          }
+
+          // Calculate start date considering dependencies and user availability
+          const earliestStart = getEarliestStartDate(task, userName);
+          const taskStart = earliestStart > userWorkload[userName].nextDate
+            ? earliestStart
+            : userWorkload[userName].nextDate;
+
           const taskEnd = dateUtils.addWorkingDays(taskStart, userEffort, user);
 
           // Update user workload
@@ -87,19 +162,45 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
           const nextDay = new Date(taskEnd);
           nextDay.setDate(nextDay.getDate() + 1);
           userWorkload[userName].nextDate = nextDay;
+          userWorkload[userName].currentTask = task;
 
-          // Create scheduled task (one per user)
+          // Schedule task
           scheduled.push({
             ...task,
-            assignedUsers: [userName], // Single user for this scheduled instance
-            effortByUser: { [userName]: userEffort },
             startDate: taskStart,
             endDate: taskEnd,
+            status: 'pending',
           });
-        });
+
+          // Mark as completed for dependency tracking
+          completedTasks.add(task.id);
+
+          // Remove from pending
+          pendingTasks.splice(i, 1);
+          progressMade = true;
+        }
+
+        // If no progress was made, we have circular dependencies or other issues
+        if (!progressMade) {
+          const remainingTaskIds = pendingTasks.map((t) => t.id).join(', ');
+          onError(
+            `No se pueden programar las siguientes tareas (posible dependencia circular): ${remainingTaskIds}`
+          );
+          break;
+        }
+      }
+
+      if (iteration >= maxIterations) {
+        onError('Error: demasiadas iteraciones al programar tareas');
+      }
+
+      // Sort by start date
+      const sortedScheduled = scheduled.sort((a, b) => {
+        if (!a.startDate || !b.startDate) return 0;
+        return a.startDate.getTime() - b.startDate.getTime();
       });
 
-      onScheduled(scheduled);
+      onScheduled(sortedScheduled);
     },
     [onScheduled, onError, onWarning]
   );
