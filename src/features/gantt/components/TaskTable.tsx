@@ -47,8 +47,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
           </thead>
           <tbody>
             {tasks.map((task, idx) => {
-              const scheduled = scheduledTasks.find((st) => st.id === task.id);
-              const user = users.find((u) => u.name === scheduled?.assignedUser);
+              // Find all scheduled instances of this task
+              const scheduledInstances = scheduledTasks.filter((st) => st.id === task.id);
 
               const priorityColor =
                 task.priority === 'Alta'
@@ -63,7 +63,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                     {task.name}
                   </td>
                   <td className="px-4 py-3" style={{ color: EY.black }}>
-                    {task.effort} días
+                    {task.effortBase} días
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -84,16 +84,49 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    {scheduled?.assignedUser ? (
+                    {task.assignedUsers.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {task.assignedUsers.map((userName, userIdx) => {
+                          const user = users.find((u) => u.name === userName);
+                          const scheduledInstance = scheduledInstances.find(
+                            (si) => si.assignedUsers[0] === userName
+                          );
+                          const userEffort = scheduledInstance?.effortByUser?.[userName];
+
+                          return (
+                            <div
+                              key={userIdx}
+                              className="flex items-center gap-1 px-2 py-1 rounded"
+                              style={{ backgroundColor: EY.lightGray }}
+                            >
+                              <div
+                                className="w-3 h-3 rounded"
+                                style={{ backgroundColor: user?.color || EY.gray }}
+                              ></div>
+                              <span className="text-xs font-medium" style={{ color: EY.black }}>
+                                {userName}
+                                {userEffort && ` (${userEffort}d)`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : scheduledInstances.length > 0 ? (
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded"
-                          style={{ backgroundColor: user?.color || EY.gray }}
+                          style={{
+                            backgroundColor:
+                              users.find((u) => u.name === scheduledInstances[0].assignedUsers[0])
+                                ?.color || EY.gray,
+                          }}
                         ></div>
-                        <span style={{ color: EY.black }}>{scheduled.assignedUser}</span>
+                        <span className="text-xs" style={{ color: EY.black }}>
+                          {scheduledInstances[0].assignedUsers[0]} (auto-asignado)
+                        </span>
                       </div>
                     ) : (
-                      <span className="italic" style={{ color: EY.gray }}>
+                      <span className="italic text-xs" style={{ color: EY.gray }}>
                         Sin asignar
                       </span>
                     )}

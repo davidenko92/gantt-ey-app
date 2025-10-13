@@ -23,15 +23,30 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users 
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map((user) => {
-          const userTasks = scheduledTasks.filter((task) => task.assignedUser === user.name);
-          const totalDays = userTasks.reduce((sum, task) => sum + task.effort, 0);
+          // Filter tasks where this user is assigned (now tasks are split by user)
+          const userTasks = scheduledTasks.filter((task) =>
+            task.assignedUsers.includes(user.name)
+          );
 
-          // Contar tareas por prioridad
+          // Calculate total effort for this user (sum of effortByUser)
+          const totalDays = userTasks.reduce((sum, task) => {
+            return sum + (task.effortByUser?.[user.name] || 0);
+          }, 0);
+
+          // Count tasks by priority (unique tasks, not instances)
+          const uniqueTaskIds = new Set(userTasks.map((t) => t.id));
+          const uniqueTasks = Array.from(uniqueTaskIds).map((taskId) =>
+            userTasks.find((t) => t.id === taskId)
+          );
+
           const priorityCount = {
-            Alta: userTasks.filter((t) => t.priority === 'Alta').length,
-            Media: userTasks.filter((t) => t.priority === 'Media').length,
-            Baja: userTasks.filter((t) => t.priority === 'Baja').length,
+            Alta: uniqueTasks.filter((t) => t?.priority === 'Alta').length,
+            Media: uniqueTasks.filter((t) => t?.priority === 'Media').length,
+            Baja: uniqueTasks.filter((t) => t?.priority === 'Baja').length,
           };
+
+          // Category badge color
+          const categoryColor = user.category === 'Senior' ? '#10B981' : '#3B82F6';
 
           return (
             <div
@@ -44,9 +59,15 @@ export const UserSummary: React.FC<UserSummaryProps> = ({ scheduledTasks, users 
                 <h4 className="font-semibold" style={{ color: EY.black }}>
                   {user.name}
                 </h4>
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-semibold text-white"
+                  style={{ backgroundColor: categoryColor }}
+                >
+                  {user.category}
+                </span>
               </div>
               <div className="text-sm space-y-1" style={{ color: EY.gray }}>
-                <p>{userTasks.length} tareas asignadas</p>
+                <p>{uniqueTasks.length} tareas asignadas</p>
                 <p>{totalDays} días de trabajo total</p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {priorityCount.Alta > 0 && (

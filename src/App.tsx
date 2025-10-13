@@ -7,6 +7,7 @@ import { useNotification } from '@hooks/useNotification';
 import { useFileUpload } from '@hooks/useFileUpload';
 import { useTaskScheduler } from '@hooks/useTaskScheduler';
 import { exportToExcel as exportGanttToExcel } from '@features/gantt/services/excelExporter';
+import { parseJsonToUsers } from '@features/gantt/services/userJsonProcessor';
 import { GanttChart } from '@features/gantt/components/GanttChart';
 import { TaskTable } from '@features/gantt/components/TaskTable';
 import { UserSummary } from '@features/gantt/components/UserSummary';
@@ -50,6 +51,9 @@ const App: React.FC = () => {
     onError: (message) => {
       notify(message, 'error');
     },
+    onWarning: (message) => {
+      notify(message, 'info');
+    },
   });
 
   // Gestión de usuarios
@@ -57,6 +61,7 @@ const App: React.FC = () => {
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: `Usuario ${users.length + 1}`,
+      category: 'Senior', // Default category
       color: DEFAULT_USER_COLORS[users.length % DEFAULT_USER_COLORS.length],
       vacations: [],
     };
@@ -69,6 +74,34 @@ const App: React.FC = () => {
 
   const removeUser = (userId: string) => {
     setUsers(users.filter((u) => u.id !== userId));
+  };
+
+  const handleLoadUsersJson = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const { users: loadedUsers, errors } = parseJsonToUsers(text);
+
+      if (errors.length > 0) {
+        notify(`Errores al cargar usuarios:\n${errors.join('\n')}`, 'error');
+        return;
+      }
+
+      if (loadedUsers.length === 0) {
+        notify('No se encontraron usuarios válidos en el JSON', 'error');
+        return;
+      }
+
+      setUsers(loadedUsers);
+      notify(`Cargados ${loadedUsers.length} usuarios desde ${file.name}`, 'success');
+    } catch (error) {
+      notify('Error al leer el archivo JSON', 'error');
+    }
+
+    // Reset input for same file reload
+    event.target.value = '';
   };
 
   // Gestión de prioridades de tareas
@@ -230,6 +263,7 @@ const App: React.FC = () => {
             onAddUser={addUser}
             onUpdateUser={updateUser}
             onRemoveUser={removeUser}
+            onLoadUsersJson={handleLoadUsersJson}
             onNotify={notify}
           />
         )}

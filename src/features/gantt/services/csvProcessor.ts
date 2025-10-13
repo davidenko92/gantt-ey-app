@@ -28,16 +28,26 @@ export const parseCsvToTasks = (csvText: string): Task[] => {
 
     if (columns.length >= 2 && columns[0] && columns[1]) {
       const taskName = columns[0].trim();
-      const effort = parseInt(columns[1]) || 1;
+      const effortBase = parseInt(columns[1]) || 1;
       const priorityValue = columns[2]?.trim() || '';
       const priority: Priority = isValidPriority(priorityValue) ?? 'Media';
 
-      if (taskName && effort > 0) {
+      // Parse assigned users (column 3) - semicolon separated
+      const assignedUsersValue = columns[3]?.trim() || '';
+      const assignedUsers: string[] = assignedUsersValue
+        ? assignedUsersValue
+            .split(';')
+            .map((name) => name.trim())
+            .filter((name) => name.length > 0)
+        : [];
+
+      if (taskName && effortBase > 0) {
         extractedTasks.push({
           id: `task-${extractedTasks.length + 1}`,
           name: taskName,
-          effort,
+          effortBase,
           priority,
+          assignedUsers,
         });
       }
     }

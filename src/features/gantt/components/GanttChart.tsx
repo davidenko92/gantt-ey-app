@@ -54,7 +54,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users })
           {scheduledTasks.map((task, idx) => {
             if (!task.startDate || !task.endDate) return null;
 
-            const user = users.find((u) => u.name === task.assignedUser);
+            // Get the user assigned to this task instance
+            const userName = task.assignedUsers[0]; // Each scheduled task has one user
+            const user = users.find((u) => u.name === userName);
+            const userEffort = task.effortByUser?.[userName] || 0;
+
             const startOffset = Math.floor(
               (task.startDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)
             );
@@ -79,7 +83,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users })
                       color: user?.color === EY.yellow ? EY.black : EY.white,
                     }}
                   >
-                    {task.assignedUser?.split(' ')[0]} - {task.effort}d
+                    {userName?.split(' ')[0]} - {userEffort}d
                   </div>
                 </div>
               </div>
@@ -93,14 +97,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users })
             Usuarios:
           </h4>
           <div className="flex flex-wrap gap-4">
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: user.color }}></div>
-                <span className="text-sm" style={{ color: EY.black }}>
-                  {user.name}
-                </span>
-              </div>
-            ))}
+            {users.map((user) => {
+              const categoryColor = user.category === 'Senior' ? '#10B981' : '#3B82F6';
+              return (
+                <div key={user.id} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: user.color }}></div>
+                  <span className="text-sm" style={{ color: EY.black }}>
+                    {user.name}
+                  </span>
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-semibold text-white"
+                    style={{ backgroundColor: categoryColor }}
+                  >
+                    {user.category}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

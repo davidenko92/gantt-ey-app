@@ -1,7 +1,7 @@
-import React from 'react';
-import { Plus, Trash2, Calendar, Clock, Users, Settings } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Plus, Trash2, Calendar, Clock, Users, Settings, Upload } from 'lucide-react';
 import { EY_COLORS } from '@features/gantt/constants';
-import { User } from '@types';
+import { User, UserCategory } from '@types';
 
 interface ConfigPanelProps {
   startDate: Date;
@@ -10,6 +10,7 @@ interface ConfigPanelProps {
   onAddUser: () => void;
   onUpdateUser: (userId: string, updates: Partial<User>) => void;
   onRemoveUser: (userId: string) => void;
+  onLoadUsersJson: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onNotify: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -20,9 +21,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
   onAddUser,
   onUpdateUser,
   onRemoveUser,
+  onLoadUsersJson,
   onNotify,
 }) => {
   const EY = EY_COLORS;
+  const jsonInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div
@@ -60,14 +63,31 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
             Gestión de Usuarios
           </h4>
 
-          <button
-            onClick={onAddUser}
-            className="flex items-center gap-2 text-white px-6 py-3 rounded-lg hover:opacity-90 mb-6 shadow-md font-medium"
-            style={{ backgroundColor: EY.black }}
-          >
-            <Plus size={18} />
-            Agregar Usuario
-          </button>
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={onAddUser}
+              className="flex items-center gap-2 text-white px-6 py-3 rounded-lg hover:opacity-90 shadow-md font-medium"
+              style={{ backgroundColor: EY.black }}
+            >
+              <Plus size={18} />
+              Agregar Usuario
+            </button>
+            <button
+              onClick={() => jsonInputRef.current?.click()}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg hover:opacity-90 shadow-md font-medium"
+              style={{ backgroundColor: EY.yellow, color: EY.black }}
+            >
+              <Upload size={18} />
+              Cargar Usuarios JSON
+            </button>
+            <input
+              ref={jsonInputRef}
+              type="file"
+              accept=".json"
+              onChange={onLoadUsersJson}
+              className="hidden"
+            />
+          </div>
 
           <div className="space-y-6">
             {users.map((user) => (
@@ -85,14 +105,27 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     className="w-16 h-16 rounded-xl border-2 cursor-pointer shadow-md"
                     style={{ borderColor: EY.gray }}
                   />
-                  <input
-                    type="text"
-                    value={user.name}
-                    onChange={(e) => onUpdateUser(user.id, { name: e.target.value })}
-                    className="flex-1 border-2 rounded-lg px-4 py-3 font-medium focus:outline-none"
-                    style={{ borderColor: EY.gray }}
-                    placeholder="Nombre del usuario"
-                  />
+                  <div className="flex-1 space-y-3">
+                    <input
+                      type="text"
+                      value={user.name}
+                      onChange={(e) => onUpdateUser(user.id, { name: e.target.value })}
+                      className="w-full border-2 rounded-lg px-4 py-3 font-medium focus:outline-none"
+                      style={{ borderColor: EY.gray }}
+                      placeholder="Nombre del usuario"
+                    />
+                    <select
+                      value={user.category}
+                      onChange={(e) =>
+                        onUpdateUser(user.id, { category: e.target.value as UserCategory })
+                      }
+                      className="w-full border-2 rounded-lg px-4 py-3 font-medium focus:outline-none cursor-pointer"
+                      style={{ borderColor: EY.gray }}
+                    >
+                      <option value="Senior">Senior (x1.0)</option>
+                      <option value="Staff">Staff (x1.4)</option>
+                    </select>
+                  </div>
                   <button
                     onClick={() => onRemoveUser(user.id)}
                     className="text-red-600 hover:text-red-700 p-3 hover:bg-red-50 rounded-lg"

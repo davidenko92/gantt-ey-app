@@ -47,6 +47,7 @@ describe('dateUtils', () => {
     const user: User = {
       id: 'user-1',
       name: 'Test User',
+      category: 'Senior',
       color: '#000',
       vacations: [new Date('2025-08-01'), new Date('2025-08-02')],
     };
@@ -72,6 +73,7 @@ describe('dateUtils', () => {
     const user: User = {
       id: 'user-1',
       name: 'Test User',
+      category: 'Senior',
       color: '#000',
       vacations: [new Date('2025-01-15')],
     };

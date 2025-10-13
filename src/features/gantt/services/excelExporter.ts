@@ -44,12 +44,16 @@ export const exportToExcel = (options: ExportOptions): string => {
     const duration =
       Math.floor((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+    // Get the user and effort for this task instance
+    const userName = task.assignedUsers[0] || '';
+    const userEffort = task.effortByUser?.[userName] || 0;
+
     const row = [
       task.name,
-      task.assignedUser || '',
+      userName,
       task.startDate.toLocaleDateString('es-ES'),
       task.endDate.toLocaleDateString('es-ES'),
-      task.effort,
+      userEffort,
     ];
 
     // Llenar días del proyecto
@@ -100,8 +104,8 @@ export const exportToExcel = (options: ExportOptions): string => {
   ];
 
   users.forEach((user) => {
-    const userTasks = scheduledTasks.filter((t) => t.assignedUser === user.name);
-    const totalUserDays = userTasks.reduce((sum, t) => sum + t.effort, 0);
+    const userTasks = scheduledTasks.filter((t) => t.assignedUsers.includes(user.name));
+    const totalUserDays = userTasks.reduce((sum, t) => sum + (t.effortByUser?.[user.name] || 0), 0);
     summaryData.push([user.name, userTasks.length, totalUserDays]);
   });
 
