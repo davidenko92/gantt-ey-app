@@ -1,7 +1,7 @@
 # Documento Funcional - Planificador de Proyectos EY
 
-**Versión**: 1.0
-**Fecha**: 2025-10-10
+**Versión**: 2.0 - Sistema Multi-Equipo
+**Fecha**: 2025-10-13
 **Proyecto**: Gantt EY App
 
 ---
@@ -10,36 +10,37 @@
 
 ### 1.1 Descripción General
 
-El **Planificador de Proyectos EY** es una aplicación web que permite la planificación automática de tareas de proyectos, distribuyendo la carga de trabajo entre múltiples usuarios de forma balanceada, respetando días laborables, vacaciones y prioridades.
+El **Planificador de Proyectos EY** es una aplicación web que permite la planificación automática de tareas de proyectos multi-equipo, distribuyendo la carga de trabajo entre múltiples equipos y usuarios de forma balanceada. Soporta workflows configurables con dependencias entre equipos, respetando días laborables, vacaciones y prioridades.
 
-### 1.2 Flujo de Trabajo Principal
+### 1.2 Flujo de Trabajo Principal (Multi-Equipo)
 
 ```
 ┌─────────────────┐
-│ 1. Cargar       │
-│    Archivo      │ → Excel/CSV con: Tarea | Esfuerzo | Prioridad
+│ 1. Configurar   │
+│    Equipos      │ → Desarrollo, Calidad, Auditoría, Testing...
 └────────┬────────┘
          ↓
 ┌─────────────────┐
-│ 2. Configurar   │
-│    Usuarios     │ → Nombre | Color | Vacaciones
+│ 2. Cargar       │
+│    Tareas Base  │ → Excel/CSV: Tarea | Esfuerzo | Prioridad | Devs
 └────────┬────────┘
          ↓
 ┌─────────────────┐
-│ 3. Ajustar      │
-│    Prioridades  │ → Editar desde UI (Alta/Media/Baja)
+│ 3. Configurar   │
+│    Workflow     │ → Por cada tarea: Habilitar equipos, tipos, prioridades
 └────────┬────────┘
          ↓
 ┌─────────────────┐
-│ 4. Planificar   │ → Algoritmo automático de asignación
+│ 4. Expandir y   │
+│    Planificar   │ → Sistema crea tareas por equipo + dependencias
 └────────┬────────┘
          ↓
 ┌─────────────────┐
-│ 5. Visualizar   │ → Gantt + Tabla + Resumen por Usuario
+│ 5. Visualizar   │ → Gantt multi-fase + Resumen por equipo/usuario
 └────────┬────────┘
          ↓
 ┌─────────────────┐
-│ 6. Exportar     │ → Descargar Excel con planificación
+│ 6. Exportar     │ → Excel con workflow completo
 └─────────────────┘
 ```
 
@@ -48,13 +49,29 @@ El **Planificador de Proyectos EY** es una aplicación web que permite la planif
 #### **Task (Tarea)**
 ```typescript
 interface Task {
-  id: string;              // Identificador único
-  name: string;            // Nombre de la tarea
-  effort: number;          // Esfuerzo en días laborables
-  priority: Priority;      // 'Alta' | 'Media' | 'Baja'
-  assignedUser?: string;   // Usuario asignado (tras planificación)
-  startDate?: Date;        // Fecha de inicio (tras planificación)
-  endDate?: Date;          // Fecha de fin (tras planificación)
+  id: string;                    // Identificador único
+  code: string;                  // Código de tarea (P035, P036...)
+  name: string;                  // Nombre de la tarea
+  effortBase: number;            // Esfuerzo base antes de multiplicadores
+  priority: Priority;            // 'Alta' | 'Media' | 'Baja'
+  team: string;                  // ID del equipo responsable
+  assignedUsers: string[];       // Usuarios asignados
+
+  // Workflow multi-equipo
+  taskType?: TaskType;           // 'development' | 'review' | 'stabilization'
+  parentTaskId?: string;         // Tarea padre si es derivada
+  teamEfforts: Record<string, TaskTeamEffort>; // Configuración por equipo
+
+  // Dependencias
+  dependsOn?: string[];          // IDs de tareas prerequisito
+  canStartInParallel?: boolean;  // Puede ejecutarse en paralelo
+  interruptsCurrent?: boolean;   // Interrumpe tareas en curso
+
+  // Calculados
+  effortByUser?: Record<string, number>; // Esfuerzo por usuario tras multiplicadores
+  startDate?: Date;
+  endDate?: Date;
+  status?: 'pending' | 'in-progress' | 'completed' | 'blocked';
 }
 ```
 
@@ -63,14 +80,57 @@ interface Task {
 interface User {
   id: string;              // Identificador único
   name: string;            // Nombre del usuario
+  category: UserCategory;  // 'Senior' | 'Staff'
   color: string;           // Color hexadecimal para visualización
   vacations: Date[];       // Fechas de vacaciones
+}
+```
+
+#### **Team (Equipo)**
+```typescript
+interface Team {
+  id: string;              // Identificador (dev, quality, audit...)
+  name: string;            // Nombre visible
+  color: string;           // Color del equipo
+  icon?: string;           // Icono opcional
+  users: User[];           // Miembros del equipo
+  config: TeamConfig;      // Configuración del equipo
+}
+```
+
+#### **TaskTeamEffort (Configuración de Equipo por Tarea)**
+```typescript
+interface TaskTeamEffort {
+  enabled: boolean;                    // ¿Equipo activo para esta tarea?
+
+  // Tarea primaria
+  reviewEffort: number;                // Días de esfuerzo base
+  reviewAssignedUsers: string[];       // Usuarios asignados
+  reviewTaskName?: string;             // Nombre personalizado (ej: "Auditoría")
+  reviewPriority?: Priority;           // Prioridad específica
+
+  // Tarea de seguimiento
+  correctionEffort: number;
+  correctionAssignedUsers: string[];
+  correctionTaskName?: string;         // Nombre personalizado (ej: "Corrección")
+  correctionPriority?: Priority;
+  generateCorrection: boolean;         // ¿Generar tarea de seguimiento?
 }
 ```
 
 #### **Priority (Prioridad)**
 ```typescript
 type Priority = 'Alta' | 'Media' | 'Baja';
+```
+
+#### **UserCategory (Categoría de Usuario)**
+```typescript
+type UserCategory = 'Senior' | 'Staff';
+
+const EFFORT_MULTIPLIERS: Record<UserCategory, number> = {
+  Senior: 1.0,   // Tiempo base
+  Staff: 1.4,    // 40% más tiempo
+};
 ```
 
 ### 1.4 Reglas de Negocio
@@ -91,22 +151,40 @@ type Priority = 'Alta' | 'Media' | 'Baja';
 - Primera fila se considera **encabezado** si contiene "tarea" (ignorada)
 - Tamaño máximo: **5MB**
 
-#### **RN-03: Algoritmo de Planificación**
+#### **RN-03: Expansión de Tareas Multi-Equipo**
+1. **Para cada tarea base**:
+   - Crear tareas de desarrollo (una por desarrollador asignado)
+   - Para cada equipo habilitado:
+     - Crear tarea(s) primaria(s) (revisión/auditoría/testing)
+     - Si habilitado, crear tarea(s) de seguimiento (estabilización/corrección)
+
+2. **Dependencias**:
+   - Tareas primarias dependen del desarrollo completado
+   - Tareas de seguimiento dependen de TODAS las tareas primarias del equipo
+   - Garantiza orden lógico de ejecución
+
+3. **Auto-asignación con balanceo**:
+   - Si no hay usuarios asignados, usa round-robin
+   - Distribuye carga equitativamente entre miembros del equipo
+   - Actualiza workload por cada asignación
+
+#### **RN-04: Algoritmo de Planificación**
 1. **Ordenar tareas por prioridad**:
    - Orden: Alta (1) → Media (2) → Baja (3)
-   - Dentro de cada prioridad, mantener orden original
+   - Aplica a tareas de todos los equipos
 
 2. **Para cada tarea (en orden)**:
+   - Verificar dependencias (todas completadas)
    - Seleccionar usuario con **menor carga total** de días
    - Asignar tarea desde su `nextDate` disponible
-   - Calcular `endDate` usando días laborables (RN-04)
+   - Calcular `endDate` usando días laborables (RN-05)
    - Actualizar carga y `nextDate` del usuario
 
 3. **Balanceo de carga**:
-   - Distribución equitativa entre usuarios
-   - Respeta disponibilidad individual
+   - Distribución equitativa entre usuarios de cada equipo
+   - Respeta disponibilidad individual y vacaciones
 
-#### **RN-04: Días Laborables**
+#### **RN-05: Días Laborables**
 - **No se cuentan como días de trabajo**:
   - Sábados (día 6)
   - Domingos (día 0)
@@ -116,21 +194,40 @@ type Priority = 'Alta' | 'Media' | 'Baja';
   - Jueves (1), Viernes (2), Lunes (3), Martes (4), Miércoles (5)
   - No cuenta: Sábado, Domingo
 
-#### **RN-05: Gestión de Usuarios**
+#### **RN-06: Gestión de Usuarios y Equipos**
 - Nombre por defecto: "Usuario N" (N = número secuencial)
 - Color asignado de paleta predefinida (rotación circular)
 - Vacaciones múltiples por usuario (array de fechas)
 - Mínimo 1 usuario requerido para planificar
+- **Categoría obligatoria**: Senior o Staff (afecta multiplicador de esfuerzo)
+- **Equipos**: Usuarios pueden pertenecer a múltiples equipos
 
-#### **RN-06: Edición de Prioridades**
+#### **RN-07: Multiplicadores de Categoría**
+- **Senior**: Multiplicador 1.0x (tiempo base)
+- **Staff**: Multiplicador 1.4x (40% más tiempo)
+- Aplica a TODOS los equipos (desarrollo, revisión, auditoría, etc.)
+- Cálculo: `effortFinal = effortBase * multiplier`
+- Redondeo: Siempre hacia arriba (ceil)
+
+#### **RN-08: Edición de Prioridades**
 - Prioridades editables desde UI en **cualquier momento**
 - Al cambiar prioridad:
   - Se actualiza el estado de tareas
   - Se limpia la planificación actual
   - Requiere re-ejecutar "Planificar"
 - Cambio en tiempo real mediante dropdown
+- Cada equipo puede tener prioridad independiente para su fase
 
-#### **RN-07: Exportación**
+#### **RN-09: Configuración Dinámica de Workflow**
+- Por cada tarea y equipo, se puede configurar:
+  - **Habilitar/Deshabilitar**: Checkbox para activar el equipo
+  - **Nombre de tarea**: Personalizable (Auditoría, Testing, Code Review, etc.)
+  - **Prioridad**: Independiente de la tarea base
+  - **Esfuerzo**: Ajustable en días (acepta decimales 0.5)
+  - **Usuarios**: MultiSelect o auto-asignación
+  - **Generar seguimiento**: Checkbox para habilitar tarea correctiva
+
+#### **RN-10: Exportación**
 - Genera archivo Excel con 2 hojas:
   1. **"Diagrama Gantt"**: Matriz visual con barras (███)
      - Columnas: Tarea | Usuario | Inicio | Fin | Días | [Fechas del proyecto]
@@ -645,6 +742,70 @@ module.exports = {
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
 | 1.0 | 2025-10-10 | Documento inicial - Sistema de prioridades híbrido implementado |
+| 2.0 | 2025-10-13 | Sistema multi-equipo con workflow configurable - Mejoras visuales en Gantt |
+
+---
+
+## 5. NUEVAS FUNCIONALIDADES v2.0
+
+### 5.1 Sistema Multi-Equipo
+
+**Descripción**: Soporte completo para múltiples equipos con workflows configurables
+
+**Componentes Nuevos**:
+- `taskExpander.ts`: Expande tareas base en tareas por equipo con dependencias
+- `effortCalculator.ts`: Calcula esfuerzos con multiplicadores de categoría
+- `MultiSelect.tsx`: Componente de selección múltiple de usuarios
+
+**Archivos Modificados**:
+- `types.ts`: Nuevas interfaces Team, TaskTeamEffort, TeamConfig
+- `TaskTable.tsx`: UI de configuración dinámica por equipo
+- `UserSummary.tsx`: Agrupación por equipos, fechas de vacaciones
+- `GanttChart.tsx`: Visualización solo de días laborables
+
+### 5.2 Configuración Dinámica de Tareas
+
+**Implementación**: Cada tarea puede configurarse independientemente por equipo
+
+**Campos Configurables**:
+- ✅ Habilitar/deshabilitar equipo
+- 📝 Nombre de tarea personalizado
+- 🎯 Prioridad específica
+- ⏱️ Esfuerzo ajustable
+- 👥 Asignación de usuarios
+- 🔄 Generación de tarea de seguimiento
+
+### 5.3 Mejoras Visuales
+
+**Gantt Chart**:
+- Solo muestra días laborables (Lun-Vie)
+- Mejor uso del espacio horizontal
+- Posicionamiento preciso con Map de fechas
+
+**User Summary**:
+- Display de fechas de vacaciones específicas (DD/MM)
+- Agrupación visual por equipos
+- Contadores de tipos de tarea (Dev, Rev, Estab)
+
+### 5.4 Dependencias Inteligentes
+
+**Implementación**:
+- Tareas primarias dependen del desarrollo
+- Tareas de seguimiento dependen de TODAS las tareas primarias
+- Evita inicio prematuro de correcciones
+
+**Ejemplo**:
+```typescript
+// P035 - Calidad tiene 3 revisores
+reviewUsers = ['Ana', 'Carlos', 'María'];
+
+// La estabilización depende de las 3 revisiones
+dependsOn: [
+  'P035-quality-review-Ana',
+  'P035-quality-review-Carlos',
+  'P035-quality-review-María'
+];
+```
 
 ---
 

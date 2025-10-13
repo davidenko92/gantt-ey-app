@@ -1,5 +1,8 @@
 # Guía de Uso - Planificador de Proyectos EY
 
+**Versión**: 2.0 - Sistema Multi-Equipo
+**Fecha**: 2025-10-13
+
 ## 📋 Formato de Archivos
 
 ### 1. Archivo de Usuarios (usuarios.json)
@@ -62,7 +65,34 @@ El sistema ahora soporta un archivo JSON para definir usuarios con sus categorí
 
 ## 🎯 Flujo de Trabajo Recomendado
 
-### Opción 1: Cargar Usuarios JSON + Tareas CSV/Excel
+### Opción 1: Sistema Multi-Equipo (Nuevo)
+
+1. **Configurar Equipos**
+   - Ir a "Configuración"
+   - Definir equipos: Desarrollo, Calidad, Auditoría, etc.
+   - Asignar usuarios a cada equipo
+   - Configurar categorías (Senior/Staff) por usuario
+
+2. **Cargar Tareas Base**
+   - Cargar archivo CSV/Excel con tareas
+   - Solo necesitas: Nombre, Esfuerzo, Prioridad, Desarrolladores
+
+3. **Configurar Workflow por Tarea**
+   - En la tabla de tareas, para cada equipo:
+     - ✅ Habilitar el equipo
+     - 📝 Definir tipo de tarea (Auditoría, Testing, etc.)
+     - 🎯 Configurar prioridad específica
+     - ⏱️ Ajustar esfuerzo estimado
+     - 👥 Asignar usuarios del equipo
+     - 🔄 Opcionalmente habilitar tarea de seguimiento
+
+4. **Planificar y Visualizar**
+   - Haz clic en "Planificar"
+   - El sistema expande automáticamente las tareas
+   - Visualiza el Gantt con todas las fases
+   - Revisa resumen por usuario y equipo
+
+### Opción 2: Flujo Simple (Un solo equipo)
 
 1. **Preparar archivo de usuarios** (`usuarios.json`)
    - Define todos los usuarios del equipo con sus categorías
@@ -81,7 +111,7 @@ El sistema ahora soporta un archivo JSON para definir usuarios con sus categorí
    - Carga el archivo de tareas
    - Haz clic en "Planificar"
 
-### Opción 2: Crear Usuarios Manualmente + Tareas CSV/Excel
+### Opción 3: Crear Usuarios Manualmente + Tareas CSV/Excel
 
 1. **En la aplicación:**
    - Abre "Configuración"
@@ -93,6 +123,75 @@ El sistema ahora soporta un archivo JSON para definir usuarios con sus categorí
 2. **Cargar tareas:**
    - Carga el archivo CSV/Excel con las tareas
    - Haz clic en "Planificar"
+
+## 🏢 Sistema Multi-Equipo
+
+### Conceptos Clave
+
+#### Equipos
+El sistema soporta múltiples equipos trabajando en secuencia o paralelo:
+- **Desarrollo (dev)**: Equipo base, siempre presente
+- **Calidad (quality)**: Revisión de calidad
+- **Auditoría (audit)**: Auditoría de seguridad
+- **Testing (testing)**: Testing funcional
+- *(Configurables según necesidad)*
+
+#### Tipos de Tareas por Equipo
+
+Cada equipo puede generar dos tipos de tareas:
+
+1. **Tarea Primaria** (Revisión/Auditoría/Testing):
+   - Se ejecuta después del desarrollo
+   - Nombre personalizable
+   - Prioridad independiente
+   - Asignación de usuarios del equipo
+
+2. **Tarea de Seguimiento** (Estabilización/Corrección):
+   - Opcional, se habilita por tarea
+   - Se ejecuta después de la tarea primaria
+   - Puede volver al equipo de desarrollo
+   - Permite correcciones basadas en hallazgos
+
+### Ejemplo de Workflow Multi-Equipo
+
+```
+Tarea: P035 - Implementar Login
+├─ Desarrollo (Juan) - 5 días
+├─ Calidad (Ana) - 2 días
+│  └─ Estabilización (Juan) - 1 día
+└─ Auditoría (Carlos) - 1 día
+   └─ Corrección Seguridad (María) - 0.5 días
+```
+
+### Configuración Avanzada por Tarea
+
+En la tabla de tareas, cada equipo tiene su propia columna con:
+
+**1. Checkbox "Habilitar"**
+- Activa el equipo para esta tarea específica
+- Si está deshabilitado, el equipo no participa
+
+**2. Tipo de Tarea**
+- Input de texto libre
+- Ejemplos: "Auditoría", "Testing", "Code Review", "Validación"
+
+**3. Prioridad**
+- Dropdown: Alta / Media / Baja
+- Independiente de la prioridad de desarrollo
+- Ej: Desarrollo Media, Auditoría Alta
+
+**4. Esfuerzo (días)**
+- Numérico, acepta decimales (0.5 días)
+- Se aplica el multiplicador de categoría
+
+**5. Usuarios**
+- MultiSelect para asignación múltiple
+- Auto-asignación con balanceo de carga si se deja vacío
+
+**6. Tarea de Seguimiento (opcional)**
+- Checkbox "Generar tarea de seguimiento"
+- Misma configuración que la tarea primaria
+- Depende automáticamente de todas las tareas primarias
 
 ## 📊 Cálculo de Esfuerzos
 
@@ -175,6 +274,7 @@ Si cargas tareas que referencian usuarios que aún no existen, obtendrás errore
 
 ## 🚀 Tips de Uso
 
+### General
 1. **Usar JSON para equipos grandes:** Si tienes más de 3-4 usuarios, es más rápido usar JSON
 
 2. **Priorizar tareas críticas:** Marca las tareas urgentes como "Alta" prioridad para que se planifiquen primero
@@ -184,6 +284,21 @@ Si cargas tareas que referencian usuarios que aún no existen, obtendrás errore
 4. **Dejar tareas sin asignar:** Útil cuando no sabes quién las hará. El sistema las asignará balanceando la carga
 
 5. **Editar sobre la marcha:** Puedes cambiar prioridades, categorías, colores y vacaciones sin recargar archivos
+
+### Sistema Multi-Equipo
+
+6. **Habilitar solo equipos necesarios:** No todas las tareas requieren auditoría o testing. Habilita solo lo necesario
+
+7. **Prioridades diferenciadas:** Usa prioridades diferentes por equipo:
+   - Desarrollo: Media
+   - Auditoría Seguridad: Alta
+   - Testing: Media
+
+8. **Tareas de seguimiento selectivas:** No todas las revisiones generan correcciones. Habilita solo cuando se esperen hallazgos
+
+9. **Equipos en paralelo:** Algunos equipos pueden trabajar simultáneamente al desarrollo si está configurado en su TeamConfig
+
+10. **Visualización del Gantt:** El Gantt ahora solo muestra días laborables (Lun-Vie), facilitando la lectura del timeline
 
 ## 📖 Ejemplos Prácticos
 

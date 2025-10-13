@@ -1,9 +1,9 @@
 # Refactorización Gantt EY App - Estado Actualizado
 
-**Fecha**: 2025-10-10
-**Rama Activa**: dev
+**Fecha**: 2025-10-13
+**Rama Activa**: feature-1
 **Rama Principal**: master
-**Archivo Principal**: `src/App.tsx` (284 líneas, reducción del 65%)
+**Archivo Principal**: `src/App.tsx` (Arquitectura modular multi-equipo)
 
 ---
 
@@ -14,14 +14,15 @@
 - ✅ **FASE 2**: Modularización completa - COMPLETADA
 - ✅ **FASE 3**: Path aliases - COMPLETADA
 - ✅ **FASE 4**: Limpieza de dependencias - COMPLETADA
-- ✅ **NUEVA**: Sistema de prioridades híbrido - COMPLETADA
+- ✅ **FASE 5**: Sistema de prioridades híbrido - COMPLETADA
+- ✅ **FASE 6**: Sistema multi-equipo con workflow configurable - COMPLETADA
 
 ### Métricas Clave
 - **Reducción de App.tsx**: 808 → 284 líneas (65%)
-- **Archivos creados**: 20+ componentes, hooks, servicios
+- **Archivos creados**: 25+ componentes, hooks, servicios
 - **Cobertura de tests**: ~80%
-- **Commits en dev**: 7 commits
-- **Estado del proyecto**: ✅ Funcional y estable
+- **Commits en feature-1**: 1 commit (feat: configuración dinámica)
+- **Estado del proyecto**: ✅ Sistema multi-equipo operativo
 
 ---
 
@@ -641,6 +642,145 @@ npm run format      # Formatear código con Prettier
 
 ---
 
+## ✅ FASE 6: SISTEMA MULTI-EQUIPO CON WORKFLOW CONFIGURABLE (COMPLETADA)
+
+### Características Implementadas
+
+#### 1. Sistema de Equipos Multi-Fase
+- **Equipos configurables**: Desarrollo, Calidad, Auditoría, Testing, etc.
+- **Workflow personalizable**: Cada equipo puede tener tareas primarias y de seguimiento
+- **Dependencias inteligentes**: Las tareas de seguimiento esperan a TODAS las tareas primarias
+
+#### 2. Configuración Dinámica de Tareas por Equipo
+
+**Implementación** (`types.ts`):
+```typescript
+export interface TaskTeamEffort {
+  enabled: boolean;
+
+  // Tarea primaria (revisión/auditoría/testing, etc.)
+  reviewEffort: number;
+  reviewAssignedUsers: string[];
+  reviewTaskName?: string;        // Nombre personalizable
+  reviewPriority?: Priority;      // Prioridad personalizable
+
+  // Tarea de seguimiento (estabilización/corrección, etc.)
+  correctionEffort: number;
+  correctionAssignedUsers: string[];
+  correctionTaskName?: string;    // Nombre personalizable
+  correctionPriority?: Priority;  // Prioridad personalizable
+  generateCorrection: boolean;    // Control de generación
+}
+```
+
+#### 3. UI Avanzada para Configuración
+
+**TaskTable con configuración por equipo:**
+- **Checkbox "Habilitar"**: Activa/desactiva el equipo para la tarea
+- **Tipo de Tarea**: Input de texto para nombre personalizado (ej: "Auditoría", "Testing")
+- **Prioridad**: Dropdown independiente de la tarea original
+- **Esfuerzo**: Input numérico con decimales (0.5 días)
+- **Usuarios**: MultiSelect para asignación múltiple
+
+**Sección de Seguimiento (opcional por equipo):**
+- **Checkbox "Generar tarea de seguimiento"**: Control granular
+- Mismos campos configurables que la tarea primaria
+- Depende automáticamente de TODAS las tareas primarias
+
+#### 4. Mejoras en Dependencias
+
+**Implementación** (`taskExpander.ts`):
+```typescript
+// Las tareas de seguimiento dependen de TODAS las review tasks
+const allReviewTaskIds = reviewUsers.map(
+  (reviewerName) => `${task.code}-${team.id}-review-${reviewerName.replace(/\s+/g, '-')}`
+);
+
+// Asignación de dependencia
+followUpTask.dependsOn = allReviewTaskIds;
+```
+
+#### 5. Mejoras Visuales en Gantt
+
+**Solo días laborables:**
+- Eliminación de fines de semana del timeline
+- Cálculo preciso con Map de fechas a posiciones
+- Mejor legibilidad y uso del espacio
+
+**Implementación** (`GanttChart.tsx`):
+```typescript
+// Generar solo días laborables
+const businessDays: Date[] = [];
+while (currentDate <= maxDate) {
+  const dayOfWeek = currentDate.getDay();
+  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    businessDays.push(new Date(currentDate));
+  }
+  currentDate.setDate(currentDate.getDate() + 1);
+}
+```
+
+#### 6. Mejoras en Resumen de Usuarios
+
+**Vacaciones detalladas:**
+- Display de fechas específicas en formato DD/MM
+- Badges visuales con color naranja
+- Agrupación por equipo en el resumen
+
+**Implementación** (`UserSummary.tsx`):
+```typescript
+{user.vacations.map((vacation, idx) => (
+  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">
+    {vacation.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+    })}
+  </span>
+))}
+```
+
+#### 7. Multiplicadores de Categoría Universales
+
+**Aplicación a todos los equipos:**
+- Senior: 1.0x (tiempo base)
+- Staff: 1.4x (40% más tiempo)
+- Aplica tanto a desarrollo como a todos los equipos de revisión
+- Cálculo automático mediante `calculateEffortByUser()`
+
+### Flujo de Trabajo Multi-Equipo
+
+```
+1. Tarea Original (P035)
+   ↓
+2. Desarrollo → P035-dev-Juan
+   ↓
+3. Equipos Habilitados:
+   ├─ Calidad → P035-quality-review-Ana (depende de dev)
+   │    └─ Seguimiento → P035-quality-correction-Juan (depende de review)
+   │
+   └─ Auditoría → P035-audit-review-Carlos (depende de dev)
+        └─ Seguimiento → P035-audit-correction-María (depende de review)
+```
+
+### Beneficios del Sistema
+
+1. **Flexibilidad Total**: Cada equipo puede configurar sus propias tareas
+2. **Control Granular**: Habilitar/deshabilitar seguimientos por tarea
+3. **Prioridades Independientes**: Cada fase puede tener su propia urgencia
+4. **Nomenclatura Personalizada**: Nombres de tareas adaptables al contexto
+5. **Asignación Inteligente**: Auto-asignación con balanceo de carga
+6. **Dependencias Correctas**: Garantiza orden lógico de ejecución
+
+### Archivos Modificados
+
+- `src/types.ts`: Nuevos campos en TaskTeamEffort
+- `src/features/gantt/services/taskExpander.ts`: Lógica de expansión mejorada
+- `src/features/gantt/components/TaskTable.tsx`: UI de configuración avanzada
+- `src/features/gantt/components/GanttChart.tsx`: Solo días laborables
+- `src/features/gantt/components/UserSummary.tsx`: Fechas de vacaciones detalladas
+
+---
+
 ## 📝 DECISIONES TÉCNICAS
 
 ### ¿Por qué Feature-Based Structure?
@@ -784,7 +924,8 @@ Antes de considerar el proyecto "producción-ready":
 
 ---
 
-**Última Actualización**: 2025-10-10
+**Última Actualización**: 2025-10-13
 **Actualizado Por**: Claude Code
-**Estado**: ✅ Proyecto refactorizado y funcional
-**Siguiente Sesión**: Mejoras opcionales según necesidades del usuario
+**Estado**: ✅ Sistema multi-equipo con workflow configurable operativo
+**Rama**: feature-1
+**Siguiente Sesión**: Testing y validación del sistema multi-equipo
