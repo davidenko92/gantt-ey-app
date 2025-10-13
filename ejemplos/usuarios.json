@@ -1,0 +1,30 @@
+[
+  {
+    "id": "user-1",
+    "name": "Juan Pérez",
+    "category": "Senior",
+    "color": "#3B82F6",
+    "vacations": ["2025-10-15", "2025-10-16", "2025-10-20"]
+  },
+  {
+    "id": "user-2",
+    "name": "María López",
+    "category": "Staff",
+    "color": "#EF4444",
+    "vacations": ["2025-10-22", "2025-10-23"]
+  },
+  {
+    "id": "user-3",
+    "name": "Carlos Gómez",
+    "category": "Senior",
+    "color": "#10B981",
+    "vacations": []
+  },
+  {
+    "id": "user-4",
+    "name": "Ana Martínez",
+    "category": "Staff",
+    "color": "#F59E0B",
+    "vacations": ["2025-10-25"]
+  }
+]
