@@ -1,23 +1,31 @@
 import React from 'react';
 import { EY_COLORS } from '@features/gantt/constants';
-import { Task, User, Priority } from '@types';
+import { Task, User, Priority, Team, TaskTeamEffort } from '@types';
+import { MultiSelect } from '@components/ui/MultiSelect';
+import { getDefaultTeamEffort } from '@features/gantt/services/taskExpander';
 
 interface TaskTableProps {
   tasks: Task[];
   scheduledTasks: Task[];
   users: User[];
+  teams: Team[];
   onUpdatePriority: (taskId: string, newPriority: Priority) => void;
+  onUpdateTaskTeamEffort: (taskId: string, teamId: string, effort: Partial<TaskTeamEffort>) => void;
 }
 
 export const TaskTable: React.FC<TaskTableProps> = ({
   tasks,
   scheduledTasks,
   users,
+  teams,
   onUpdatePriority,
+  onUpdateTaskTeamEffort,
 }) => {
   const EY = EY_COLORS;
 
   if (tasks.length === 0) return null;
+
+  const nonDevTeams = teams.filter((t) => t.id !== 'dev');
 
   return (
     <div
@@ -35,14 +43,23 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                 Tarea
               </th>
               <th className="px-4 py-3 text-left font-semibold" style={{ color: EY.black }}>
-                Esfuerzo
+                Esfuerzo Dev
               </th>
               <th className="px-4 py-3 text-left font-semibold" style={{ color: EY.black }}>
                 Prioridad
               </th>
               <th className="px-4 py-3 text-left font-semibold" style={{ color: EY.black }}>
-                Asignado
+                Desarrolladores
               </th>
+              {nonDevTeams.map((team) => (
+                <th
+                  key={team.id}
+                  className="px-4 py-3 text-left font-semibold"
+                  style={{ color: team.color, borderLeft: `2px solid ${team.color}40` }}
+                >
+                  {team.name}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -131,6 +148,124 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                       </span>
                     )}
                   </td>
+
+                  {/* Columnas dinámicas por equipo */}
+                  {nonDevTeams.map((team) => {
+                    const teamEffort = task.teamEfforts[team.id] || getDefaultTeamEffort(task, team);
+                    const teamUsers = team.users;
+
+                    return (
+                      <td
+                        key={team.id}
+                        className="px-4 py-3 align-top"
+                        style={{ borderLeft: `2px solid ${team.color}40` }}
+                      >
+                        <div className="space-y-3 min-w-[200px]">
+                          {/* Checkbox para habilitar */}
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={teamEffort.enabled}
+                              onChange={(e) =>
+                                onUpdateTaskTeamEffort(task.id, team.id, {
+                                  enabled: e.target.checked,
+                                })
+                              }
+                              className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                              style={{ accentColor: team.color }}
+                            />
+                            <span className="text-xs font-medium">Habilitar</span>
+                          </label>
+
+                          {teamEffort.enabled && (
+                            <>
+                              {/* Esfuerzo de revisión */}
+                              <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                  Revisión (días)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.5"
+                                  value={teamEffort.reviewEffort}
+                                  onChange={(e) =>
+                                    onUpdateTaskTeamEffort(task.id, team.id, {
+                                      reviewEffort: parseFloat(e.target.value) || 0,
+                                    })
+                                  }
+                                  className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none"
+                                  style={{ borderColor: team.color }}
+                                />
+                              </div>
+
+                              {/* Revisores */}
+                              <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                  Revisores
+                                </label>
+                                <MultiSelect
+                                  options={teamUsers}
+                                  selected={teamEffort.reviewAssignedUsers}
+                                  onChange={(selectedNames) =>
+                                    onUpdateTaskTeamEffort(task.id, team.id, {
+                                      reviewAssignedUsers: selectedNames,
+                                    })
+                                  }
+                                  placeholder="Auto-asignar"
+                                  size="sm"
+                                />
+                              </div>
+
+                              {/* Corrección (si está configurado) */}
+                              {team.config.triggersCorrection && (
+                                <>
+                                  <div>
+                                    <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                      Corrección (días)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.5"
+                                      value={teamEffort.correctionEffort}
+                                      onChange={(e) =>
+                                        onUpdateTaskTeamEffort(task.id, team.id, {
+                                          correctionEffort: parseFloat(e.target.value) || 0,
+                                        })
+                                      }
+                                      className="w-full border-2 rounded px-2 py-1 text-xs focus:outline-none"
+                                      style={{ borderColor: team.color }}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium mb-1" style={{ color: EY.gray }}>
+                                      Correctores
+                                    </label>
+                                    <MultiSelect
+                                      options={
+                                        teams.find((t) => t.id === team.config.correctionTeam)?.users ||
+                                        []
+                                      }
+                                      selected={teamEffort.correctionAssignedUsers}
+                                      onChange={(selectedNames) =>
+                                        onUpdateTaskTeamEffort(task.id, team.id, {
+                                          correctionAssignedUsers: selectedNames,
+                                        })
+                                      }
+                                      placeholder="Originales"
+                                      size="sm"
+                                    />
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}
