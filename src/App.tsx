@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Download, Calendar, Users, Settings, Play } from 'lucide-react';
 import { EY_COLORS, DEFAULT_USER_COLORS } from '@features/gantt/constants';
 import { EYLogo } from '@components/ui/EYLogo';
@@ -8,20 +8,50 @@ import { useFileUpload } from '@hooks/useFileUpload';
 import { useTaskScheduler } from '@hooks/useTaskScheduler';
 import { exportToExcel as exportGanttToExcel } from '@features/gantt/services/excelExporter';
 import { parseJsonToUsers } from '@features/gantt/services/userJsonProcessor';
+import { getDefaultTeamEffort } from '@features/gantt/services/taskExpander';
 import { GanttChart } from '@features/gantt/components/GanttChart';
 import { TaskTable } from '@features/gantt/components/TaskTable';
 import { UserSummary } from '@features/gantt/components/UserSummary';
 import { ConfigPanel } from '@features/gantt/components/ConfigPanel';
-import { Task, User, Priority } from '@types';
+import { Task, User, Priority, Team, TaskTeamEffort } from '@types';
 
 const App: React.FC = () => {
   const EY = EY_COLORS;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<Task[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [showConfig, setShowConfig] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize default development team
+  useEffect(() => {
+    if (teams.length === 0) {
+      const devTeam: Team = {
+        id: 'dev',
+        name: 'Desarrollo',
+        color: '#3B82F6',
+        users: [],
+        config: {
+          canWorkInParallel: false,
+          triggersCorrection: false,
+          correctionPriority: 'Media',
+          interruptsCurrent: false,
+        },
+      };
+      setTeams([devTeam]);
+    }
+  }, []);
+
+  // Sync development team users with global users
+  useEffect(() => {
+    setTeams((prevTeams) =>
+      prevTeams.map((team) =>
+        team.id === 'dev' ? { ...team, users } : team
+      )
+    );
+  }, [users]);
 
   // Notificaciones
   const { notification, notify, closeNotification } = useNotification();
@@ -30,7 +60,18 @@ const App: React.FC = () => {
   const { uploadedFile, handleFileUpload, clearFile } = useFileUpload({
     onTasksLoaded: (loadedTasks, fileName) => {
       if (loadedTasks.length > 0) {
-        setTasks(loadedTasks);
+        // Initialize teamEfforts for each task
+        const tasksWithTeamEfforts = loadedTasks.map((task) => ({
+          ...task,
+          teamEfforts: teams.reduce((acc, team) => {
+            if (team.id !== 'dev') {
+              acc[team.id] = getDefaultTeamEffort(task, team);
+            }
+            return acc;
+          }, {} as Record<string, TaskTeamEffort>),
+        }));
+
+        setTasks(tasksWithTeamEfforts);
         setScheduledTasks([]);
         notify(`Cargadas ${loadedTasks.length} tareas desde ${fileName}`, 'success');
       } else {
@@ -104,6 +145,61 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
+  // Gestión de equipos
+  const addTeam = () => {
+    const newTeam: Team = {
+      id: `team-${Date.now()}`,
+      name: `Equipo ${teams.length}`,
+      color: '#8B5CF6',
+      users: [],
+      config: {
+        canWorkInParallel: true,
+        triggersCorrection: true,
+        correctionTeam: 'dev',
+        correctionPriority: 'Alta',
+        interruptsCurrent: false,
+        defaultReviewEffortPercent: 100,
+        defaultCorrectionDays: 1,
+      },
+    };
+    setTeams([...teams, newTeam]);
+
+    // Initialize teamEfforts for existing tasks
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => ({
+        ...task,
+        teamEfforts: {
+          ...task.teamEfforts,
+          [newTeam.id]: getDefaultTeamEffort(task, newTeam),
+        },
+      }))
+    );
+  };
+
+  const updateTeam = (teamId: string, updates: Partial<Team>) => {
+    setTeams(teams.map((t) => (t.id === teamId ? { ...t, ...updates } : t)));
+  };
+
+  const removeTeam = (teamId: string) => {
+    if (teamId === 'dev') {
+      notify('No se puede eliminar el equipo de desarrollo', 'error');
+      return;
+    }
+
+    setTeams(teams.filter((t) => t.id !== teamId));
+
+    // Remove teamEfforts for this team from all tasks
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        const { [teamId]: removed, ...remainingEfforts } = task.teamEfforts;
+        return {
+          ...task,
+          teamEfforts: remainingEfforts,
+        };
+      })
+    );
+  };
+
   // Gestión de prioridades de tareas
   const updateTaskPriority = (taskId: string, newPriority: Priority) => {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)));
@@ -111,9 +207,35 @@ const App: React.FC = () => {
     setScheduledTasks([]);
   };
 
+  // Gestión de teamEfforts de tareas
+  const updateTaskTeamEffort = (
+    taskId: string,
+    teamId: string,
+    effortUpdates: Partial<TaskTeamEffort>
+  ) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              teamEfforts: {
+                ...task.teamEfforts,
+                [teamId]: {
+                  ...task.teamEfforts[teamId],
+                  ...effortUpdates,
+                },
+              },
+            }
+          : task
+      )
+    );
+    // Clear scheduled tasks so they get re-planned
+    setScheduledTasks([]);
+  };
+
   // Planificación automática
   const scheduleTasksAutomatically = () => {
-    scheduleTasks(tasks, users, startDate);
+    scheduleTasks(tasks, users, teams, startDate);
   };
 
   // Exportar
@@ -259,11 +381,15 @@ const App: React.FC = () => {
           <ConfigPanel
             startDate={startDate}
             users={users}
+            teams={teams}
             onStartDateChange={setStartDate}
             onAddUser={addUser}
             onUpdateUser={updateUser}
             onRemoveUser={removeUser}
             onLoadUsersJson={handleLoadUsersJson}
+            onAddTeam={addTeam}
+            onUpdateTeam={updateTeam}
+            onRemoveTeam={removeTeam}
             onNotify={notify}
           />
         )}
@@ -273,14 +399,16 @@ const App: React.FC = () => {
           tasks={tasks}
           scheduledTasks={scheduledTasks}
           users={users}
+          teams={teams}
           onUpdatePriority={updateTaskPriority}
+          onUpdateTaskTeamEffort={updateTaskTeamEffort}
         />
 
         {/* Resumen por usuario */}
-        <UserSummary scheduledTasks={scheduledTasks} users={users} />
+        <UserSummary scheduledTasks={scheduledTasks} users={users} teams={teams} />
 
         {/* Diagrama de Gantt */}
-        <GanttChart scheduledTasks={scheduledTasks} users={users} />
+        <GanttChart scheduledTasks={scheduledTasks} users={users} teams={teams} />
 
         {/* Mensaje inicial */}
         {!uploadedFile && !tasks.length && (
