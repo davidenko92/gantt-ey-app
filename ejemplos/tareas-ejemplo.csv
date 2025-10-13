@@ -1,7 +1,6 @@
 Tarea,Esfuerzo,Prioridad,Persona asignada
-Diseño de arquitectura,5,Alta,Juan Pérez
-Implementación de API,8,Alta,María López;Carlos Gómez
-Testing unitario,3,Media,Ana Martínez
-Documentación técnica,4,Baja,
-Code Review,2,Media,Juan Pérez;María López
-Despliegue a producción,3,Alta,Carlos Gómez
+P035 - Implementar API de autenticación,5,Alta,Alberto Ruiz
+P036 - Diseño de base de datos,3,Media,María García
+P037 - Desarrollo de interfaz de usuario,4,Alta,Alberto Ruiz;María García
+P038 - Integración con servicios externos,6,Media,Carlos López
+P039 - Testing y QA,2,Baja,Ana Martínez
