@@ -58,7 +58,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
           <div className="flex">
             {businessDays.map((date, i) => {
               return (
-                <div key={i} className="text-xs text-center border-l border-gray-200 w-10">
+                <div key={i} className="text-xs text-center border-l border-gray-200" style={{ width: '40px' }}>
                   {date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
                 </div>
               );

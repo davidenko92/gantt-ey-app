@@ -2,6 +2,11 @@ import { useCallback } from 'react';
 import { dateUtils } from '@features/gantt/utils/dateUtils';
 import { expandTasksWithTeams } from '@features/gantt/services/taskExpander';
 import { validateTeamDependencies } from '@features/gantt/services/dependencyValidator';
+import {
+  applyChildLockDependencies,
+  recalculateTaskDates,
+  validateTaskDependencies,
+} from '@features/gantt/services/dependencyResolver';
 import { Task, User, Team } from '@types';
 
 interface UseTaskSchedulerOptions {
@@ -62,9 +67,9 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       }
 
       // Validate team dependencies
-      const validation = validateTeamDependencies(teams);
-      if (!validation.valid) {
-        onError(`Configuración de equipos inválida:\n${validation.errors.join('\n')}`);
+      const teamValidation = validateTeamDependencies(teams);
+      if (!teamValidation.valid) {
+        onError(`Configuración de equipos inválida:\n${teamValidation.errors.join('\n')}`);
         return;
       }
 
@@ -87,8 +92,11 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       // Expand tasks into workflow phases (dev, review, correction)
       const expandedTasks = expandTasksWithTeams(tasks, teams);
 
+      // Apply child-lock dependencies: ancestors cannot start until ALL descendants complete
+      const tasksWithChildLock = applyChildLockDependencies(expandedTasks);
+
       // Sort by dependencies first (topological sort), then by priority
-      const sortedTasks = topologicalSort(expandedTasks);
+      const sortedTasks = topologicalSort(tasksWithChildLock);
 
       // Initialize user workload per team
       const userWorkload: Record<
@@ -240,10 +248,27 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       }
 
       // Sort by start date
-      const sortedScheduled = scheduled.sort((a, b) => {
+      let sortedScheduled = scheduled.sort((a, b) => {
         if (!a.startDate || !b.startDate) return 0;
         return a.startDate.getTime() - b.startDate.getTime();
       });
+
+      // Recalculate dates based on dependencies to ensure correctness
+      try {
+        sortedScheduled = recalculateTaskDates(sortedScheduled);
+      } catch (error) {
+        onError(
+          `Error recalculando fechas: ${error instanceof Error ? error.message : 'Error desconocido'}`
+        );
+        return;
+      }
+
+      // Validate dependencies before returning
+      const validation = validateTaskDependencies(sortedScheduled);
+      if (!validation.valid) {
+        onError(`Validación de dependencias falló:\n${validation.errors.join('\n')}`);
+        return;
+      }
 
       onScheduled(sortedScheduled);
     },

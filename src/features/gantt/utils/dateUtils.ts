@@ -44,4 +44,23 @@ export const dateUtils = {
     }
     return current;
   },
+
+  /**
+   * Adds working days (business days only, excluding weekends)
+   * Simplified version that doesn't require user or holidays
+   *
+   * Example: addBusinessDays(Monday, 4) = Friday (Mon + 4 business days)
+   */
+  addBusinessDays: (startDate: Date, days: number) => {
+    let current = new Date(startDate);
+    let daysAdded = 0;
+
+    while (daysAdded < days) {
+      current.setDate(current.getDate() + 1);
+      if (!dateUtils.isWeekend(current)) {
+        daysAdded++;
+      }
+    }
+    return current;
+  },
 };
