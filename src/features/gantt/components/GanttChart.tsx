@@ -119,15 +119,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
                 <div className="w-64 text-sm font-medium pr-4" style={{ color: EY.black }}>
                   {task.name}
                 </div>
-                <div className="relative flex">
+                <div className="flex" style={{ position: 'relative' }}>
+                  {/* Task bar positioned absolutely */}
                   <div
                     className="h-6 rounded flex items-center justify-center text-xs font-medium shadow-sm"
                     style={{
+                      position: 'absolute',
+                      left: `${startPosition * 40}px`,
                       backgroundColor: taskStyle.backgroundColor,
                       border: taskStyle.border,
-                      marginLeft: startPosition * 40,
-                      width: duration * 40,
-                      minWidth: 80,
+                      width: `${duration * 40}px`,
                       color: '#FFFFFF',
                       opacity: task.taskType === 'review' ? 0.85 : 1,
                     }}

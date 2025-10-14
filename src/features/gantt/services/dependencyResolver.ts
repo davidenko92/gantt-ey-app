@@ -256,9 +256,11 @@ export function recalculateTaskDates(tasks: Task[]): Task[] {
     }
 
     // Calculate end date using business days (excluding weekends)
-    // If task has N days duration, it should span from day 1 to day N
-    // addBusinessDays adds days AFTER the start date, so we subtract 1
-    const newEndDate = dateUtils.addBusinessDays(newStartDate, durationDays - 1);
+    // If task has N days duration and starts on day D:
+    // - Day D counts as day 1
+    // - So we need to add (N - 1) business days after day D
+    // Example: 16 day task starting Monday = Monday + 15 business days
+    const newEndDate = dateUtils.addBusinessDays(newStartDate, Math.max(0, durationDays - 1));
 
     // Create updated task (immutable)
     const updatedTask: Task = {
