@@ -135,8 +135,8 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
 
           // Task can only start the day AFTER the last dependency ends
           if (latestDepEnd) {
-            const dayAfterLatestDep = new Date(latestDepEnd);
-            dayAfterLatestDep.setDate(dayAfterLatestDep.getDate() + 1);
+            // Get next WORKING day after dependency completes (no user-specific vacations)
+            const dayAfterLatestDep = dateUtils.getNextWorkingDay(latestDepEnd);
 
             // Use the later of: user availability or dependency completion
             earliestDate = dayAfterLatestDep > earliestDate ? dayAfterLatestDep : earliestDate;
@@ -204,9 +204,9 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
 
           // Update user workload
           userWorkload[userName].totalDays += userEffort;
-          const nextDay = new Date(taskEnd);
-          nextDay.setDate(nextDay.getDate() + 1);
-          userWorkload[userName].nextDate = nextDay;
+          // Get next WORKING day after task ends
+          const nextWorkingDay = dateUtils.getNextWorkingDay(taskEnd, user);
+          userWorkload[userName].nextDate = nextWorkingDay;
           userWorkload[userName].currentTask = task;
 
           // Schedule task

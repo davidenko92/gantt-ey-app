@@ -214,29 +214,35 @@ const App: React.FC = () => {
     teamId: string,
     effortUpdates: Partial<TaskTeamEffort>
   ) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => {
+    setTasks((prevTasks) => {
+      const updated = prevTasks.map((task) => {
         if (task.id !== taskId) return task;
 
         // Find the team to get default values if needed
         const team = teams.find((t) => t.id === teamId);
-        if (!team) return task;
+        if (!team) {
+          return task;
+        }
 
         // Get existing effort or default
         const existingEffort = task.teamEfforts?.[teamId] || getDefaultTeamEffort(task, team);
+
+        const newEffort = {
+          ...existingEffort,
+          ...effortUpdates,
+        };
 
         return {
           ...task,
           teamEfforts: {
             ...task.teamEfforts,
-            [teamId]: {
-              ...existingEffort,
-              ...effortUpdates,
-            },
+            [teamId]: newEffort,
           },
         };
-      })
-    );
+      });
+
+      return updated;
+    });
     // Clear scheduled tasks so they get re-planned
     setScheduledTasks([]);
   };

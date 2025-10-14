@@ -9,6 +9,25 @@ export const dateUtils = {
   isUserOnVacation: (date: Date, user: User) =>
     user.vacations.some((v) => v.toDateString() === date.toDateString()),
 
+  /**
+   * Gets the next working day after the given date
+   * Skips weekends, holidays, and optionally user vacations
+   */
+  getNextWorkingDay: (date: Date, user?: User, holidays: Date[] = []) => {
+    let nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    while (
+      dateUtils.isWeekend(nextDay) ||
+      dateUtils.isHoliday(nextDay, holidays) ||
+      (user && dateUtils.isUserOnVacation(nextDay, user))
+    ) {
+      nextDay.setDate(nextDay.getDate() + 1);
+    }
+
+    return nextDay;
+  },
+
   addWorkingDays: (startDate: Date, days: number, user: User, holidays: Date[] = []) => {
     let current = new Date(startDate);
     let remaining = days;

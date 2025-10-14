@@ -1,30 +1,78 @@
 [
   {
     "id": "user-1",
-    "name": "Julian",
+    "name": "Alberto Ruiz",
     "category": "Senior",
-    "color": "#3B82F6",
-    "vacations": ["2025-10-20", "2025-10-21"]
+    "color": "#3B82F6"
   },
   {
     "id": "user-2",
-    "name": "Pepe",
-    "category": "Staff",
+    "name": "Alejandro Alcantara",
+    "category": "Senior",
     "color": "#EF4444",
     "vacations": []
   },
   {
     "id": "user-3",
-    "name": "Carlos López",
+    "name": "Jose Diego Dorado",
     "category": "Senior",
     "color": "#10B981",
     "vacations": ["2025-10-25"]
   },
   {
     "id": "user-4",
-    "name": "Ana Martínez",
-    "category": "Staff",
+    "name": "Jorge Pizarro",
+    "category": "Senior",
+    "color": "#8B5CF6",
+    "vacations": []
+  },
+  {
+    "id": "user-5",
+    "name": "Nacho Aranda",
+    "category": "Senior",
     "color": "#F59E0B",
+    "vacations": []
+  },
+  {
+    "id": "user-6",
+    "name": "Lara Sanchez",
+    "category": "Senior",
+    "color": "#06B6D4",
+    "vacations": []
+  },
+  {
+    "id": "user-7",
+    "name": "Ainhoa Gil",
+    "category": "Senior",
+    "color": "#F97316",
+    "vacations": []
+  },
+  {
+    "id": "user-8",
+    "name": "Pedro Ramón",
+    "category": "Senior",
+    "color": "#22C55E",
+    "vacations": []
+  },
+  {
+    "id": "user-9",
+    "name": "Ivan Caceres",
+    "category": "Senior",
+    "color": "#6366F1",
+    "vacations": []
+  },
+  {
+    "id": "user-10",
+    "name": "David",
+    "category": "Senior",
+    "color": "#EC4899",
+    "vacations": []
+  },
+  {
+    "id": "user-11",
+    "name": "Dummy",
+    "category": "Senior",
+    "color": "#84CC16",
     "vacations": []
   }
 ]

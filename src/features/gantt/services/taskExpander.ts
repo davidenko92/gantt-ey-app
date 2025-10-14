@@ -50,16 +50,18 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
       });
     });
 
-    // 2. For each enabled team, create review and correction tasks
+    // 2. PHASE 1: Create all review tasks first (waterfall through teams)
     // Track previous team's task IDs (starts with dev)
     let previousTeamTaskIds = allDevTaskIds;
 
-    for (const team of teams.filter((t) => t.id !== 'dev')) {
+    // Store review task IDs per team for later correction processing
+    const reviewTaskIdsByTeam = new Map<string, string[]>();
+    const enabledTeams = teams.filter((t) => t.id !== 'dev' && task.teamEfforts[t.id]?.enabled);
+
+    for (const team of enabledTeams) {
       const teamEffort = task.teamEfforts[team.id];
 
-      if (!teamEffort?.enabled) continue;
-
-      // 2a. Create review task instances (one per reviewer)
+      // Create review task instances (one per reviewer)
       let reviewUsers = teamEffort.reviewAssignedUsers || [];
 
       if (reviewUsers.length === 0 && team.users.length > 0) {
@@ -80,11 +82,11 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
       const reviewPriority = teamEffort.reviewPriority || task.priority;
 
       // Track all review task IDs for this team
-      const currentTeamTaskIds: string[] = [];
+      const currentTeamReviewTaskIds: string[] = [];
 
       reviewUsers.forEach((userName) => {
         const reviewTaskId = `${task.code}-${team.id}-review-${userName.replace(/\s+/g, '-')}`;
-        currentTeamTaskIds.push(reviewTaskId);
+        currentTeamReviewTaskIds.push(reviewTaskId);
 
         expandedTasks.push({
           ...task,
@@ -97,14 +99,31 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
           parentTaskId: task.id,
           assignedUsers: [userName],
           effortByUser: { [userName]: reviewEffortByUser[userName] || teamEffort.reviewEffort },
-          // THIS TEAM depends on ALL tasks from the PREVIOUS team completing
+          // Review depends on ALL tasks from the PREVIOUS team completing
           dependsOn: previousTeamTaskIds,
           canStartInParallel: team.config.canWorkInParallel,
           status: 'blocked',
         });
       });
 
-      // 2b. Create follow-up task instances (if enabled and configured)
+      // Save review task IDs for this team for later correction processing
+      reviewTaskIdsByTeam.set(team.id, currentTeamReviewTaskIds);
+
+      // Update previousTeamTaskIds for next team iteration
+      // Next team waits for THIS team's review to complete
+      previousTeamTaskIds = currentTeamReviewTaskIds;
+    }
+
+    // 3. PHASE 2: Create correction tasks in REVERSE order (like Russian dolls)
+    // Last team's corrections happen first, then second-to-last, etc.
+    const reversedEnabledTeams = [...enabledTeams].reverse();
+
+    // Track the "innermost" correction tasks (starts with last team's reviews)
+    let innermostTaskIds = previousTeamTaskIds; // Last team's review tasks
+
+    for (const team of reversedEnabledTeams) {
+      const teamEffort = task.teamEfforts[team.id];
+
       if (teamEffort.generateCorrection && teamEffort.correctionEffort > 0) {
         const followUpTeamId = team.config.correctionTeam || 'dev';
         const followUpTeam = teamMap.get(followUpTeamId);
@@ -130,7 +149,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         const correctionTaskName = teamEffort.correctionTaskName || 'Estabilización';
         const correctionPriority = teamEffort.correctionPriority || task.priority;
 
-        // Track correction task IDs
+        // Track correction task IDs for this team
         const correctionTaskIds: string[] = [];
 
         followUpUsers.forEach((userName) => {
@@ -150,21 +169,17 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
             effortByUser: {
               [userName]: followUpEffortByUser[userName] || teamEffort.correctionEffort,
             },
-            // Correction depends on ALL review tasks from THIS team
-            dependsOn: currentTeamTaskIds,
+            // Correction depends on the "innermost" tasks (next team's corrections or reviews)
+            dependsOn: innermostTaskIds,
             canStartInParallel: false,
             interruptsCurrent: team.config.interruptsCurrent,
             status: 'blocked',
           });
         });
 
-        // If corrections were generated, they become the "current team" for next iteration
-        currentTeamTaskIds.push(...correctionTaskIds);
+        // This team's corrections become the new "innermost" tasks
+        innermostTaskIds = correctionTaskIds;
       }
-
-      // Update previousTeamTaskIds for next team iteration
-      // Next team must wait for ALL tasks from this team (review + optional correction)
-      previousTeamTaskIds = currentTeamTaskIds;
     }
   }
 
