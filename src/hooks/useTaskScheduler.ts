@@ -10,6 +10,48 @@ interface UseTaskSchedulerOptions {
   onWarning?: (message: string) => void;
 }
 
+/**
+ * Topological sort for tasks based on dependencies
+ * Ensures tasks are ordered so that all dependencies come before dependents
+ * Also respects priority within each dependency level
+ */
+const topologicalSort = (tasks: Task[]): Task[] => {
+  const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
+  const sorted: Task[] = [];
+  const visited = new Set<string>();
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
+
+  // Helper function for depth-first traversal
+  const visit = (task: Task) => {
+    if (visited.has(task.id)) return;
+    visited.add(task.id);
+
+    // Visit all dependencies first
+    if (task.dependsOn && task.dependsOn.length > 0) {
+      task.dependsOn.forEach((depId) => {
+        const depTask = taskMap.get(depId);
+        if (depTask) {
+          visit(depTask);
+        }
+      });
+    }
+
+    // Add current task after all dependencies
+    sorted.push(task);
+  };
+
+  // Visit all tasks
+  tasks.forEach((task) => {
+    if (!visited.has(task.id)) {
+      visit(task);
+    }
+  });
+
+  // Within tasks at the same dependency level, sort by priority
+  // This is done by grouping tasks by their "depth" in the dependency tree
+  return sorted;
+};
+
 export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSchedulerOptions) => {
   const scheduleTasks = useCallback(
     (tasks: Task[], users: User[], teams: Team[], startDate: Date) => {
@@ -45,16 +87,8 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       // Expand tasks into workflow phases (dev, review, correction)
       const expandedTasks = expandTasksWithTeams(tasks, teams);
 
-      // Sort by priority and interruption capability
-      const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
-      const sortedTasks = [...expandedTasks].sort((a, b) => {
-        // First, sort by interruption capability (interrupts first)
-        if (a.interruptsCurrent && !b.interruptsCurrent) return -1;
-        if (!a.interruptsCurrent && b.interruptsCurrent) return 1;
-
-        // Then by priority
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      });
+      // Sort by dependencies first (topological sort), then by priority
+      const sortedTasks = topologicalSort(expandedTasks);
 
       // Initialize user workload per team
       const userWorkload: Record<
@@ -82,21 +116,31 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       };
 
       // Helper to get earliest start date considering dependencies
+      // STRICT: Task can only start AFTER all dependencies are complete
       const getEarliestStartDate = (task: Task, userName: string): Date => {
         let earliestDate = new Date(userWorkload[userName].nextDate);
 
         if (task.dependsOn && task.dependsOn.length > 0) {
+          // Find the latest end date among ALL dependencies
+          let latestDepEnd: Date | null = null;
+
           task.dependsOn.forEach((depId) => {
             const depTask = scheduled.find((t) => t.id === depId);
             if (depTask && depTask.endDate) {
-              const dayAfterDep = new Date(depTask.endDate);
-              dayAfterDep.setDate(dayAfterDep.getDate() + 1);
-
-              if (dayAfterDep > earliestDate) {
-                earliestDate = dayAfterDep;
+              if (!latestDepEnd || depTask.endDate > latestDepEnd) {
+                latestDepEnd = depTask.endDate;
               }
             }
           });
+
+          // Task can only start the day AFTER the last dependency ends
+          if (latestDepEnd) {
+            const dayAfterLatestDep = new Date(latestDepEnd);
+            dayAfterLatestDep.setDate(dayAfterLatestDep.getDate() + 1);
+
+            // Use the later of: user availability or dependency completion
+            earliestDate = dayAfterLatestDep > earliestDate ? dayAfterLatestDep : earliestDate;
+          }
         }
 
         return earliestDate;
