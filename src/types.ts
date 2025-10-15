@@ -99,5 +99,12 @@ export interface GanttConfig {
   holidays: Date[];
 }
 
+// Scheduling strategy for tasks at the same dependency level
+export type SchedulingStrategy =
+  | 'file-order' // Respect order from input file (default)
+  | 'priority-first' // High priority first, then file order
+  | 'longest-first' // Longest duration first (LPT algorithm)
+  | 'shortest-first'; // Shortest duration first (SPT algorithm)
+
 // Validation constants
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB

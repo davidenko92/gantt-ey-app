@@ -7,7 +7,7 @@ import {
   recalculateTaskDates,
   validateTaskDependencies,
 } from '@features/gantt/services/dependencyResolver';
-import { Task, User, Team } from '@types';
+import { Task, User, Team, SchedulingStrategy } from '@types';
 
 interface UseTaskSchedulerOptions {
   onScheduled: (scheduledTasks: Task[]) => void;
@@ -18,9 +18,9 @@ interface UseTaskSchedulerOptions {
 /**
  * Topological sort for tasks based on dependencies
  * Ensures tasks are ordered so that all dependencies come before dependents
- * Also respects priority within each dependency level
+ * Applies scheduling strategy for tasks at the same dependency level
  */
-const topologicalSort = (tasks: Task[]): Task[] => {
+const topologicalSort = (tasks: Task[], strategy: SchedulingStrategy = 'file-order'): Task[] => {
   const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
   const sorted: Task[] = [];
   const visited = new Set<string>();
@@ -33,11 +33,15 @@ const topologicalSort = (tasks: Task[]): Task[] => {
 
     // Visit all dependencies first
     if (task.dependsOn && task.dependsOn.length > 0) {
-      task.dependsOn.forEach((depId) => {
-        const depTask = taskMap.get(depId);
-        if (depTask) {
-          visit(depTask);
-        }
+      // Sort dependencies based on strategy before visiting
+      const deps = task.dependsOn
+        .map((depId) => taskMap.get(depId))
+        .filter((t): t is Task => t !== undefined);
+
+      const sortedDeps = sortTasksByStrategy(deps, strategy);
+
+      sortedDeps.forEach((depTask) => {
+        visit(depTask);
       });
     }
 
@@ -45,21 +49,75 @@ const topologicalSort = (tasks: Task[]): Task[] => {
     sorted.push(task);
   };
 
-  // Visit all tasks
-  tasks.forEach((task) => {
+  // Sort tasks by strategy before visiting (respects file order as base)
+  const sortedInput = sortTasksByStrategy([...tasks], strategy);
+
+  // Visit all tasks in sorted order
+  sortedInput.forEach((task) => {
     if (!visited.has(task.id)) {
       visit(task);
     }
   });
 
-  // Within tasks at the same dependency level, sort by priority
-  // This is done by grouping tasks by their "depth" in the dependency tree
   return sorted;
 };
 
+/**
+ * Sorts tasks based on the selected strategy
+ * Preserves file order as base, applies strategy as secondary sort
+ */
+function sortTasksByStrategy(tasks: Task[], strategy: SchedulingStrategy): Task[] {
+  const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
+
+  // Add original index to preserve file order
+  const tasksWithIndex = tasks.map((task, index) => ({ task, originalIndex: index }));
+
+  switch (strategy) {
+    case 'priority-first':
+      tasksWithIndex.sort((a, b) => {
+        const priorityDiff = priorityOrder[a.task.priority] - priorityOrder[b.task.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+        return a.originalIndex - b.originalIndex; // Preserve file order for same priority
+      });
+      break;
+
+    case 'longest-first':
+      tasksWithIndex.sort((a, b) => {
+        const durationA = a.task.effortBase;
+        const durationB = b.task.effortBase;
+        if (durationB !== durationA) return durationB - durationA; // Longest first
+        return a.originalIndex - b.originalIndex; // Preserve file order for same duration
+      });
+      break;
+
+    case 'shortest-first':
+      tasksWithIndex.sort((a, b) => {
+        const durationA = a.task.effortBase;
+        const durationB = b.task.effortBase;
+        if (durationA !== durationB) return durationA - durationB; // Shortest first
+        return a.originalIndex - b.originalIndex; // Preserve file order for same duration
+      });
+      break;
+
+    case 'file-order':
+    default:
+      // Keep original order
+      tasksWithIndex.sort((a, b) => a.originalIndex - b.originalIndex);
+      break;
+  }
+
+  return tasksWithIndex.map((item) => item.task);
+}
+
 export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSchedulerOptions) => {
   const scheduleTasks = useCallback(
-    (tasks: Task[], users: User[], teams: Team[], startDate: Date) => {
+    (
+      tasks: Task[],
+      users: User[],
+      teams: Team[],
+      startDate: Date,
+      strategy: SchedulingStrategy = 'file-order'
+    ) => {
       // Validations
       if (tasks.length === 0 || users.length === 0) {
         onError('Necesitas tareas y usuarios');
@@ -95,8 +153,8 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       // Apply child-lock dependencies: ancestors cannot start until ALL descendants complete
       const tasksWithChildLock = applyChildLockDependencies(expandedTasks);
 
-      // Sort by dependencies first (topological sort), then by priority
-      const sortedTasks = topologicalSort(tasksWithChildLock);
+      // Sort by dependencies first (topological sort), then apply strategy
+      const sortedTasks = topologicalSort(tasksWithChildLock, strategy);
 
       // Initialize user workload per team
       const userWorkload: Record<

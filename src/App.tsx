@@ -13,7 +13,7 @@ import { GanttChart } from '@features/gantt/components/GanttChart';
 import { TaskTable } from '@features/gantt/components/TaskTable';
 import { UserSummary } from '@features/gantt/components/UserSummary';
 import { ConfigPanel } from '@features/gantt/components/ConfigPanel';
-import { Task, User, Priority, Team, TaskTeamEffort } from '@types';
+import { Task, User, Priority, Team, TaskTeamEffort, SchedulingStrategy } from '@types';
 
 const App: React.FC = () => {
   const EY = EY_COLORS;
@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [scheduledTasks, setScheduledTasks] = useState<Task[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [showConfig, setShowConfig] = useState(false);
+  const [schedulingStrategy, setSchedulingStrategy] = useState<SchedulingStrategy>('file-order');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize default development team
@@ -249,7 +250,7 @@ const App: React.FC = () => {
 
   // Planificación automática
   const scheduleTasksAutomatically = () => {
-    scheduleTasks(tasks, users, teams, startDate);
+    scheduleTasks(tasks, users, teams, startDate, schedulingStrategy);
   };
 
   // Exportar
@@ -352,6 +353,18 @@ const App: React.FC = () => {
                 <Settings size={20} />
                 Configuración
               </button>
+
+              <select
+                value={schedulingStrategy}
+                onChange={(e) => setSchedulingStrategy(e.target.value as SchedulingStrategy)}
+                className="px-4 py-3 rounded-lg border-2 shadow-md font-medium text-sm"
+                style={{ borderColor: EY.yellow, color: EY.black }}
+              >
+                <option value="file-order">Orden del archivo</option>
+                <option value="priority-first">Prioridad primero</option>
+                <option value="longest-first">Más largas primero</option>
+                <option value="shortest-first">Más cortas primero</option>
+              </select>
 
               <button
                 onClick={scheduleTasksAutomatically}
