@@ -151,45 +151,14 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
       }
 
       // Apply strategy to original tasks BEFORE expansion
+      // Priority-first means: sort by priority first, then by file order
       const sortedOriginalTasks = sortTasksByStrategy([...tasks], strategy);
 
       // Expand tasks into workflow phases (dev, review, correction)
       const expandedTasks = expandTasksWithTeams(sortedOriginalTasks, teams);
 
-      // Add sequential dependencies AFTER expansion
-      // All dev tasks from task N must wait for all final tasks from task N-1
-      const expandedWithSequentialDeps = expandedTasks.map((task) => {
-        if (task.taskType !== 'development') return task; // Only apply to dev tasks
-
-        const currentTaskIndex = task.originalTaskIndex;
-        if (currentTaskIndex === undefined || currentTaskIndex === 0) return task;
-
-        // Find all "final" tasks from previous originalTaskIndex (corrections or reviews)
-        const previousIndex = currentTaskIndex - 1;
-        const previousFinalTasks = expandedTasks.filter((t) => {
-          // A task is "final" if it's the last in the workflow (no other task depends on it within same original task)
-          if (t.originalTaskIndex !== previousIndex) return false;
-
-          // Check if any task depends on this one (within same original task)
-          const hasDependent = expandedTasks.some(
-            (other) =>
-              other.originalTaskIndex === previousIndex &&
-              other.dependsOn?.includes(t.id)
-          );
-
-          return !hasDependent; // It's final if no one depends on it
-        });
-
-        const previousTaskIds = previousFinalTasks.map((t) => t.id);
-
-        return {
-          ...task,
-          dependsOn: [...(task.dependsOn || []), ...previousTaskIds],
-        };
-      });
-
       // Apply child-lock dependencies: ancestors cannot start until ALL descendants complete
-      const tasksWithChildLock = applyChildLockDependencies(expandedWithSequentialDeps);
+      const tasksWithChildLock = applyChildLockDependencies(expandedTasks);
 
       // Sort by dependencies only (topological sort)
       // Don't apply strategy here because it was already applied to original tasks
