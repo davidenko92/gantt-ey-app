@@ -64,14 +64,16 @@ const topologicalSort = (tasks: Task[], strategy: SchedulingStrategy = 'file-ord
 
 /**
  * Sorts tasks based on the selected strategy
- * For expanded tasks, uses originalTaskIndex to preserve file order
+ * For expanded tasks, uses developerTaskOrder to preserve per-developer priority ordering
  */
 function sortTasksByStrategy(tasks: Task[], strategy: SchedulingStrategy): Task[] {
   const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
 
-  // For expanded tasks, use originalTaskIndex if available
+  // For expanded tasks, use developerTaskOrder and user to preserve per-developer ordering
   const tasksWithIndex = tasks.map((task, index) => ({
     task,
+    user: task.assignedUsers[0] || '',
+    devOrder: task.developerTaskOrder !== undefined ? task.developerTaskOrder : 999,
     originalIndex: task.originalTaskIndex !== undefined ? task.originalTaskIndex : index,
   }));
 
@@ -104,8 +106,16 @@ function sortTasksByStrategy(tasks: Task[], strategy: SchedulingStrategy): Task[
 
     case 'file-order':
     default:
-      // Keep original order using originalTaskIndex from expanded tasks
-      tasksWithIndex.sort((a, b) => a.originalIndex - b.originalIndex);
+      // For expanded tasks, respect the per-developer ordering set by taskExpander
+      // Sort by user first, then by developerTaskOrder within each user
+      tasksWithIndex.sort((a, b) => {
+        // First: group by user
+        const userDiff = a.user.localeCompare(b.user);
+        if (userDiff !== 0) return userDiff;
+
+        // Second: respect developerTaskOrder (priority+file order within developer)
+        return a.devOrder - b.devOrder;
+      });
       break;
   }
 
