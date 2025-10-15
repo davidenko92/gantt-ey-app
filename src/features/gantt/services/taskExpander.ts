@@ -7,6 +7,10 @@ import { calculateEffortByUser } from './effortCalculator';
  * - Development (one per assigned developer)
  * - Review (one per assigned reviewer per team)
  * - Stabilization (one per assigned developer after review)
+ *
+ * Each developer has their own independent workflow:
+ * Developer1: Task1-dev → Task1-review → Task1-correction → Task2-dev → ...
+ * Developer2: Task1-dev → Task1-review → Task1-correction → Task2-dev → ...
  */
 export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
   const expandedTasks: Task[] = [];
@@ -31,13 +35,14 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
       devTeam.users
     );
 
-    // Track all dev task IDs for this task
-    const allDevTaskIds: string[] = [];
+    // Get enabled teams for this task
+    const enabledTeams = teams.filter((t) => t.id !== 'dev' && task.teamEfforts[t.id]?.enabled);
 
+    // FOR EACH DEVELOPER, create their complete workflow (dev → reviews → corrections)
     task.assignedUsers.forEach((userName) => {
       const devTaskId = `${task.code}-dev-${userName.replace(/\s+/g, '-')}`;
-      allDevTaskIds.push(devTaskId);
 
+      // Create development task
       expandedTasks.push({
         ...task,
         id: devTaskId,
@@ -48,139 +53,83 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         effortByUser: { [userName]: devEffortByUser[userName] || task.effortBase },
         status: 'pending',
       });
-    });
 
-    // 2. PHASE 1: Create all review tasks first (waterfall through teams)
-    // Track previous team's task IDs (starts with dev)
-    let previousTeamTaskIds = allDevTaskIds;
+      // Track the previous step ID for this developer's workflow
+      let previousStepId = devTaskId;
 
-    // Store review task IDs per team for later correction processing
-    const reviewTaskIdsByTeam = new Map<string, string[]>();
-    const enabledTeams = teams.filter((t) => t.id !== 'dev' && task.teamEfforts[t.id]?.enabled);
+      // Create review tasks for each enabled team (waterfall for this developer)
+      for (const team of enabledTeams) {
+        const teamEffort = task.teamEfforts[team.id];
+        const reviewTaskName = teamEffort.reviewTaskName || 'Revisión';
+        const reviewPriority = teamEffort.reviewPriority || task.priority;
 
-    for (const team of enabledTeams) {
-      const teamEffort = task.teamEfforts[team.id];
-
-      // Create review task instances (one per reviewer)
-      let reviewUsers = teamEffort.reviewAssignedUsers || [];
-
-      if (reviewUsers.length === 0 && team.users.length > 0) {
-        // Auto-assign using round-robin to distribute workload evenly
-        const workload = teamWorkload.get(team.id) || [];
-        const minWorkloadIndex = workload.indexOf(Math.min(...workload));
-        reviewUsers = [team.users[minWorkloadIndex].name];
-        workload[minWorkloadIndex] += teamEffort.reviewEffort;
-      }
-
-      const reviewEffortByUser = calculateEffortByUser(
-        teamEffort.reviewEffort,
-        reviewUsers,
-        team.users
-      );
-
-      const reviewTaskName = teamEffort.reviewTaskName || 'Revisión';
-      const reviewPriority = teamEffort.reviewPriority || task.priority;
-
-      // Track all review task IDs for this team
-      const currentTeamReviewTaskIds: string[] = [];
-
-      reviewUsers.forEach((userName) => {
+        // For this developer, create a review task
         const reviewTaskId = `${task.code}-${team.id}-review-${userName.replace(/\s+/g, '-')}`;
-        currentTeamReviewTaskIds.push(reviewTaskId);
+
+        // Get reviewers for this review task (from team or auto-assign)
+        const reviewers =
+          teamEffort.reviewAssignedUsers && teamEffort.reviewAssignedUsers.length > 0
+            ? teamEffort.reviewAssignedUsers
+            : team.users.map((u) => u.name); // Default to all team members
+
+        // Auto-assign reviewer using round-robin if no specific reviewers assigned
+        const assignedReviewer =
+          reviewers.length > 0 ? reviewers[0] : userName; // Fallback to dev if no reviewers
 
         expandedTasks.push({
           ...task,
           id: reviewTaskId,
           name: `${task.code} - ${reviewTaskName} ${team.name}`,
-          effortBase: reviewEffortByUser[userName] || teamEffort.reviewEffort,
+          effortBase: teamEffort.reviewEffort,
           priority: reviewPriority,
           team: team.id,
           taskType: 'review',
           parentTaskId: task.id,
-          assignedUsers: [userName],
-          effortByUser: { [userName]: reviewEffortByUser[userName] || teamEffort.reviewEffort },
-          // Review depends on ALL tasks from the PREVIOUS team completing
-          dependsOn: previousTeamTaskIds,
+          assignedUsers: [assignedReviewer], // Assigned to reviewer from review team
+          effortByUser: { [assignedReviewer]: teamEffort.reviewEffort },
+          // Review depends on this developer's previous step
+          dependsOn: [previousStepId],
           canStartInParallel: team.config.canWorkInParallel,
           status: 'blocked',
         });
-      });
 
-      // Save review task IDs for this team for later correction processing
-      reviewTaskIdsByTeam.set(team.id, currentTeamReviewTaskIds);
+        // Update previous step for potential corrections
+        const correctionDependency = reviewTaskId;
 
-      // Update previousTeamTaskIds for next team iteration
-      // Next team waits for THIS team's review to complete
-      previousTeamTaskIds = currentTeamReviewTaskIds;
-    }
+        // Create correction/stabilization if enabled
+        if (teamEffort.generateCorrection && teamEffort.correctionEffort > 0) {
+          const followUpTeamId = team.config.correctionTeam || 'dev';
+          const correctionTaskName = teamEffort.correctionTaskName || 'Estabilización';
+          const correctionPriority = teamEffort.correctionPriority || task.priority;
 
-    // 3. PHASE 2: Create correction tasks in REVERSE order (like Russian dolls)
-    // Last team's corrections happen first, then second-to-last, etc.
-    const reversedEnabledTeams = [...enabledTeams].reverse();
-
-    // Track the "innermost" correction tasks (starts with last team's reviews)
-    let innermostTaskIds = previousTeamTaskIds; // Last team's review tasks
-
-    for (const team of reversedEnabledTeams) {
-      const teamEffort = task.teamEfforts[team.id];
-
-      if (teamEffort.generateCorrection && teamEffort.correctionEffort > 0) {
-        const followUpTeamId = team.config.correctionTeam || 'dev';
-        const followUpTeam = teamMap.get(followUpTeamId);
-
-        if (!followUpTeam) {
-          console.warn(`Follow-up team ${followUpTeamId} not found`);
-          continue;
-        }
-
-        let followUpUsers = teamEffort.correctionAssignedUsers || [];
-
-        // If no users specified, use original developers
-        if (followUpUsers.length === 0) {
-          followUpUsers = task.assignedUsers;
-        }
-
-        const followUpEffortByUser = calculateEffortByUser(
-          teamEffort.correctionEffort,
-          followUpUsers,
-          followUpTeam.users
-        );
-
-        const correctionTaskName = teamEffort.correctionTaskName || 'Estabilización';
-        const correctionPriority = teamEffort.correctionPriority || task.priority;
-
-        // Track correction task IDs for this team
-        const correctionTaskIds: string[] = [];
-
-        followUpUsers.forEach((userName) => {
           const correctionTaskId = `${task.code}-${team.id}-correction-${userName.replace(/\s+/g, '-')}`;
-          correctionTaskIds.push(correctionTaskId);
 
           expandedTasks.push({
             ...task,
             id: correctionTaskId,
             name: `${task.code} - ${correctionTaskName} ${team.name}`,
-            effortBase: followUpEffortByUser[userName] || teamEffort.correctionEffort,
+            effortBase: teamEffort.correctionEffort,
             priority: correctionPriority,
             team: followUpTeamId,
             taskType: 'stabilization',
             parentTaskId: task.id,
-            assignedUsers: [userName],
-            effortByUser: {
-              [userName]: followUpEffortByUser[userName] || teamEffort.correctionEffort,
-            },
-            // Correction depends on the "innermost" tasks (next team's corrections or reviews)
-            dependsOn: innermostTaskIds,
+            assignedUsers: [userName], // Same developer does the correction
+            effortByUser: { [userName]: teamEffort.correctionEffort },
+            // Correction depends on the review
+            dependsOn: [correctionDependency],
             canStartInParallel: false,
             interruptsCurrent: team.config.interruptsCurrent,
             status: 'blocked',
           });
-        });
 
-        // This team's corrections become the new "innermost" tasks
-        innermostTaskIds = correctionTaskIds;
+          // Update previous step
+          previousStepId = correctionTaskId;
+        } else {
+          // No correction, so review is the last step for this team
+          previousStepId = reviewTaskId;
+        }
       }
-    }
+    });
   }
 
   return expandedTasks;

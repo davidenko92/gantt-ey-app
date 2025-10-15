@@ -147,14 +147,18 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         return;
       }
 
+      // Apply strategy to original tasks BEFORE expansion
+      const sortedOriginalTasks = sortTasksByStrategy([...tasks], strategy);
+
       // Expand tasks into workflow phases (dev, review, correction)
-      const expandedTasks = expandTasksWithTeams(tasks, teams);
+      const expandedTasks = expandTasksWithTeams(sortedOriginalTasks, teams);
 
       // Apply child-lock dependencies: ancestors cannot start until ALL descendants complete
       const tasksWithChildLock = applyChildLockDependencies(expandedTasks);
 
-      // Sort by dependencies first (topological sort), then apply strategy
-      const sortedTasks = topologicalSort(tasksWithChildLock, strategy);
+      // Sort by dependencies only (topological sort)
+      // Don't apply strategy here because it was already applied to original tasks
+      const sortedTasks = topologicalSort(tasksWithChildLock, 'file-order');
 
       // Initialize user workload per team
       const userWorkload: Record<

@@ -58,7 +58,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
           <div className="flex">
             {businessDays.map((date, i) => {
               return (
-                <div key={i} className="text-xs text-center border-l border-gray-200" style={{ width: '40px' }}>
+                <div
+                  key={i}
+                  className="text-xs text-center border-l border-gray-200"
+                  style={{ width: '40px' }}
+                >
                   {date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
                 </div>
               );
@@ -122,7 +126,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
                 <div className="flex" style={{ position: 'relative' }}>
                   {/* Task bar positioned absolutely */}
                   <div
-                    className="h-6 rounded flex items-center justify-center text-xs font-medium shadow-sm"
+                    className="h-6 rounded flex items-center justify-center text-xs font-medium shadow-sm overflow-hidden px-2"
                     style={{
                       position: 'absolute',
                       left: `${startPosition * 40}px`,
@@ -131,9 +135,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({ scheduledTasks, users, t
                       width: `${duration * 40}px`,
                       color: '#FFFFFF',
                       opacity: task.taskType === 'review' ? 0.85 : 1,
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
                     }}
+                    title={`${userName}: ${task.name} - ${userEffort}d`}
                   >
-                    {userName?.split(' ')[0]} - {userEffort}d
+                    {userName}: {task.name} - {userEffort}d
                   </div>
                 </div>
               </div>

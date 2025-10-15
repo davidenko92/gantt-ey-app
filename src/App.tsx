@@ -26,6 +26,16 @@ const App: React.FC = () => {
   const [schedulingStrategy, setSchedulingStrategy] = useState<SchedulingStrategy>('file-order');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Re-schedule when strategy changes (if tasks are already scheduled)
+  const handleStrategyChange = (newStrategy: SchedulingStrategy) => {
+    setSchedulingStrategy(newStrategy);
+
+    // If tasks are already scheduled, re-schedule them with the new strategy
+    if (scheduledTasks.length > 0 && tasks.length > 0 && users.length > 0) {
+      scheduleTasks(tasks, users, teams, startDate, newStrategy);
+    }
+  };
+
   // Initialize default development team
   useEffect(() => {
     if (teams.length === 0) {
@@ -356,9 +366,10 @@ const App: React.FC = () => {
 
               <select
                 value={schedulingStrategy}
-                onChange={(e) => setSchedulingStrategy(e.target.value as SchedulingStrategy)}
+                onChange={(e) => handleStrategyChange(e.target.value as SchedulingStrategy)}
                 className="px-4 py-3 rounded-lg border-2 shadow-md font-medium text-sm"
                 style={{ borderColor: EY.yellow, color: EY.black }}
+                title="Estrategia de ordenación de tareas"
               >
                 <option value="file-order">Orden del archivo</option>
                 <option value="priority-first">Prioridad primero</option>
