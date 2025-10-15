@@ -75,7 +75,8 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         assignedUsers: [userName],
         effortByUser: { [userName]: devEffortByUser[userName] || task.effortBase },
         status: 'pending',
-        originalTaskIndex: taskIndex, // Preserve original file order
+        originalTaskIndex: originalTaskIndex, // Preserve original file index
+        developerTaskOrder: taskIndex, // Order for this developer (0, 1, 2...)
       });
 
       // Track the previous step ID for this developer's workflow
@@ -122,7 +123,8 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
           dependsOn: [previousStepId],
           canStartInParallel: team.config.canWorkInParallel,
           status: 'blocked',
-          originalTaskIndex: taskIndex, // Preserve original file order
+          originalTaskIndex: originalTaskIndex, // Preserve original file index
+          developerTaskOrder: taskIndex, // Order for this developer
         });
 
         // Update previous step for potential corrections
@@ -152,7 +154,8 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
             canStartInParallel: false,
             interruptsCurrent: team.config.interruptsCurrent,
             status: 'blocked',
-            originalTaskIndex: taskIndex, // Preserve original file order
+            originalTaskIndex: originalTaskIndex, // Preserve original file index
+            developerTaskOrder: taskIndex, // Order for this developer
           });
 
           // Update previous step

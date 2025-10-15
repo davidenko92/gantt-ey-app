@@ -310,7 +310,7 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         onError('Error: demasiadas iteraciones al programar tareas');
       }
 
-      // Sort by start date, then by originalTaskIndex (priority/file order), then by user
+      // Sort by start date, then by user, then by developerTaskOrder
       let sortedScheduled = scheduled.sort((a, b) => {
         if (!a.startDate || !b.startDate) return 0;
 
@@ -318,15 +318,16 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         const dateDiff = a.startDate.getTime() - b.startDate.getTime();
         if (dateDiff !== 0) return dateDiff;
 
-        // Second: sort by originalTaskIndex to preserve priority+file order
-        const indexA = a.originalTaskIndex !== undefined ? a.originalTaskIndex : 999;
-        const indexB = b.originalTaskIndex !== undefined ? b.originalTaskIndex : 999;
-        if (indexA !== indexB) return indexA - indexB;
-
-        // Third: sort by user name to group same developer's tasks
+        // Second: sort by user name to group same developer's tasks
         const userA = a.assignedUsers[0] || '';
         const userB = b.assignedUsers[0] || '';
-        return userA.localeCompare(userB);
+        const userDiff = userA.localeCompare(userB);
+        if (userDiff !== 0) return userDiff;
+
+        // Third: sort by developerTaskOrder (priority+file order within developer)
+        const orderA = a.developerTaskOrder !== undefined ? a.developerTaskOrder : 999;
+        const orderB = b.developerTaskOrder !== undefined ? b.developerTaskOrder : 999;
+        return orderA - orderB;
       });
 
       // Recalculate dates based on dependencies to ensure correctness

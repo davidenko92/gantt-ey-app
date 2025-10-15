@@ -35,6 +35,7 @@ export interface Task {
   endDate?: Date;
   status?: 'pending' | 'in-progress' | 'completed' | 'blocked';
   originalTaskIndex?: number; // Index from original input file (for file-order strategy)
+  developerTaskOrder?: number; // Order of this task for the assigned developer (0, 1, 2...)
 }
 
 export interface TaskTeamEffort {
