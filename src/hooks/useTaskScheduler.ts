@@ -64,13 +64,16 @@ const topologicalSort = (tasks: Task[], strategy: SchedulingStrategy = 'file-ord
 
 /**
  * Sorts tasks based on the selected strategy
- * Preserves file order as base, applies strategy as secondary sort
+ * For expanded tasks, uses originalTaskIndex to preserve file order
  */
 function sortTasksByStrategy(tasks: Task[], strategy: SchedulingStrategy): Task[] {
   const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
 
-  // Add original index to preserve file order
-  const tasksWithIndex = tasks.map((task, index) => ({ task, originalIndex: index }));
+  // For expanded tasks, use originalTaskIndex if available
+  const tasksWithIndex = tasks.map((task, index) => ({
+    task,
+    originalIndex: task.originalTaskIndex !== undefined ? task.originalTaskIndex : index,
+  }));
 
   switch (strategy) {
     case 'priority-first':
@@ -101,7 +104,7 @@ function sortTasksByStrategy(tasks: Task[], strategy: SchedulingStrategy): Task[
 
     case 'file-order':
     default:
-      // Keep original order
+      // Keep original order using originalTaskIndex from expanded tasks
       tasksWithIndex.sort((a, b) => a.originalIndex - b.originalIndex);
       break;
   }

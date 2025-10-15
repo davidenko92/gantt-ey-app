@@ -22,7 +22,8 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
     teamRoundRobinIndex.set(team.id, 0);
   });
 
-  for (const task of tasks) {
+  for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+    const task = tasks[taskIndex];
     const devTeam = teamMap.get('dev');
     if (!devTeam) {
       throw new Error('Development team not found');
@@ -52,6 +53,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         assignedUsers: [userName],
         effortByUser: { [userName]: devEffortByUser[userName] || task.effortBase },
         status: 'pending',
+        originalTaskIndex: taskIndex, // Preserve original file order
       });
 
       // Track the previous step ID for this developer's workflow
@@ -98,6 +100,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
           dependsOn: [previousStepId],
           canStartInParallel: team.config.canWorkInParallel,
           status: 'blocked',
+          originalTaskIndex: taskIndex, // Preserve original file order
         });
 
         // Update previous step for potential corrections
@@ -127,6 +130,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
             canStartInParallel: false,
             interruptsCurrent: team.config.interruptsCurrent,
             status: 'blocked',
+            originalTaskIndex: taskIndex, // Preserve original file order
           });
 
           // Update previous step

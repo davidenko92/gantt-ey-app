@@ -34,6 +34,7 @@ export interface Task {
   startDate?: Date;
   endDate?: Date;
   status?: 'pending' | 'in-progress' | 'completed' | 'blocked';
+  originalTaskIndex?: number; // Index from original input file (for file-order strategy)
 }
 
 export interface TaskTeamEffort {
