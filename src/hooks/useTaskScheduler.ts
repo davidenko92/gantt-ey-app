@@ -236,19 +236,29 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         iteration++;
         let progressMade = false;
 
-        for (let i = pendingTasks.length - 1; i >= 0; i--) {
-          const task = pendingTasks[i];
+        // Find all tasks that can start now (dependencies met)
+        const readyTasks = pendingTasks.filter((task) => canStartTask(task));
 
-          // Check if task can start
-          if (!canStartTask(task)) {
-            continue;
-          }
+        // Sort ready tasks by user and developerTaskOrder to maintain correct order
+        readyTasks.sort((a, b) => {
+          const userA = a.assignedUsers[0] || '';
+          const userB = b.assignedUsers[0] || '';
+          const userDiff = userA.localeCompare(userB);
+          if (userDiff !== 0) return userDiff;
+
+          const orderA = a.developerTaskOrder !== undefined ? a.developerTaskOrder : 999;
+          const orderB = b.developerTaskOrder !== undefined ? b.developerTaskOrder : 999;
+          return orderA - orderB;
+        });
+
+        // Process ready tasks in the correct order
+        for (const task of readyTasks) {
 
           // Get assigned user
           const userName = task.assignedUsers[0];
           if (!userName) {
             onWarning?.(`Tarea ${task.id} sin usuario asignado, omitiendo`);
-            pendingTasks.splice(i, 1);
+            pendingTasks = pendingTasks.filter((t) => t.id !== task.id);
             progressMade = true;
             continue;
           }
@@ -256,7 +266,7 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
           const user = users.find((u) => u.name === userName);
           if (!user) {
             onWarning?.(`Usuario ${userName} no encontrado para tarea ${task.id}`);
-            pendingTasks.splice(i, 1);
+            pendingTasks = pendingTasks.filter((t) => t.id !== task.id);
             progressMade = true;
             continue;
           }
@@ -302,7 +312,7 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
           completedTasks.add(task.id);
 
           // Remove from pending
-          pendingTasks.splice(i, 1);
+          pendingTasks = pendingTasks.filter((t) => t.id !== task.id);
           progressMade = true;
         }
 
