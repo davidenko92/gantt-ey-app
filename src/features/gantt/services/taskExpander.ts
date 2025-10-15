@@ -16,10 +16,10 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
   const expandedTasks: Task[] = [];
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
-  // Track workload per team to enable round-robin auto-assignment
-  const teamWorkload = new Map<string, number[]>();
+  // Track round-robin index per team for fair distribution
+  const teamRoundRobinIndex = new Map<string, number>();
   teams.forEach((team) => {
-    teamWorkload.set(team.id, new Array(team.users.length).fill(0));
+    teamRoundRobinIndex.set(team.id, 0);
   });
 
   for (const task of tasks) {
@@ -67,14 +67,21 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         const reviewTaskId = `${task.code}-${team.id}-review-${userName.replace(/\s+/g, '-')}`;
 
         // Get reviewers for this review task (from team or auto-assign)
-        const reviewers =
-          teamEffort.reviewAssignedUsers && teamEffort.reviewAssignedUsers.length > 0
-            ? teamEffort.reviewAssignedUsers
-            : team.users.map((u) => u.name); // Default to all team members
+        let reviewers: string[] = [];
+        if (teamEffort.reviewAssignedUsers && teamEffort.reviewAssignedUsers.length > 0) {
+          reviewers = teamEffort.reviewAssignedUsers;
+        } else if (team.users.length > 0) {
+          reviewers = team.users.map((u) => u.name);
+        }
 
-        // Auto-assign reviewer using round-robin if no specific reviewers assigned
-        const assignedReviewer =
-          reviewers.length > 0 ? reviewers[0] : userName; // Fallback to dev if no reviewers
+        // Auto-assign reviewer using round-robin to distribute workload
+        let assignedReviewer = userName; // Fallback to dev if no reviewers
+        if (reviewers.length > 0) {
+          const currentIndex = teamRoundRobinIndex.get(team.id) || 0;
+          assignedReviewer = reviewers[currentIndex % reviewers.length];
+          // Increment round-robin index for next assignment
+          teamRoundRobinIndex.set(team.id, currentIndex + 1);
+        }
 
         expandedTasks.push({
           ...task,
