@@ -150,12 +150,9 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         return;
       }
 
-      // Apply strategy to original tasks BEFORE expansion
-      // Priority-first means: sort by priority first, then by file order
-      const sortedOriginalTasks = sortTasksByStrategy([...tasks], strategy);
-
       // Expand tasks into workflow phases (dev, review, correction)
-      const expandedTasks = expandTasksWithTeams(sortedOriginalTasks, teams);
+      // Task ordering by priority+file-order is handled inside expandTasksWithTeams per developer
+      const expandedTasks = expandTasksWithTeams(tasks, teams);
 
       // Apply child-lock dependencies: ancestors cannot start until ALL descendants complete
       const tasksWithChildLock = applyChildLockDependencies(expandedTasks);

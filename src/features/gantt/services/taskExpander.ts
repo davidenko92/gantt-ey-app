@@ -11,8 +11,11 @@ import { calculateEffortByUser } from './effortCalculator';
  * Each developer has their own independent workflow:
  * Developer1: Task1-dev → Task1-review → Task1-correction → Task2-dev → ...
  * Developer2: Task1-dev → Task1-review → Task1-correction → Task2-dev → ...
+ *
+ * Tasks are processed in priority order per developer (high priority first, then file order)
  */
 export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
+  const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
   const expandedTasks: Task[] = [];
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
@@ -33,10 +36,19 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
     task.assignedUsers.forEach((user) => allDevelopers.add(user));
   });
 
-  // FOR EACH DEVELOPER, process their tasks in the order they appear in the input
+  // FOR EACH DEVELOPER, process their tasks by priority first, then file order
   allDevelopers.forEach((userName) => {
-    // Get tasks assigned to this developer in input order
-    const developerTasks = tasks.filter((task) => task.assignedUsers.includes(userName));
+    // Get tasks assigned to this developer
+    const developerTasks = tasks
+      .filter((task) => task.assignedUsers.includes(userName))
+      .sort((a, b) => {
+        // Sort by priority first
+        const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+
+        // Then by file order (preserve input order)
+        return tasks.indexOf(a) - tasks.indexOf(b);
+      });
 
     // Process each task for this developer
     developerTasks.forEach((task, taskIndex) => {
