@@ -310,10 +310,23 @@ export const useTaskScheduler = ({ onScheduled, onError, onWarning }: UseTaskSch
         onError('Error: demasiadas iteraciones al programar tareas');
       }
 
-      // Sort by start date
+      // Sort by start date, then by originalTaskIndex (priority/file order), then by user
       let sortedScheduled = scheduled.sort((a, b) => {
         if (!a.startDate || !b.startDate) return 0;
-        return a.startDate.getTime() - b.startDate.getTime();
+
+        // First: sort by start date
+        const dateDiff = a.startDate.getTime() - b.startDate.getTime();
+        if (dateDiff !== 0) return dateDiff;
+
+        // Second: sort by originalTaskIndex to preserve priority+file order
+        const indexA = a.originalTaskIndex !== undefined ? a.originalTaskIndex : 999;
+        const indexB = b.originalTaskIndex !== undefined ? b.originalTaskIndex : 999;
+        if (indexA !== indexB) return indexA - indexB;
+
+        // Third: sort by user name to group same developer's tasks
+        const userA = a.assignedUsers[0] || '';
+        const userB = b.assignedUsers[0] || '';
+        return userA.localeCompare(userB);
       });
 
       // Recalculate dates based on dependencies to ensure correctness
