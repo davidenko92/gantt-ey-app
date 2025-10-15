@@ -22,25 +22,35 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
     teamRoundRobinIndex.set(team.id, 0);
   });
 
-  for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
-    const task = tasks[taskIndex];
-    const devTeam = teamMap.get('dev');
-    if (!devTeam) {
-      throw new Error('Development team not found');
-    }
+  const devTeam = teamMap.get('dev');
+  if (!devTeam) {
+    throw new Error('Development team not found');
+  }
 
-    // 1. Create development task instances (one per developer)
-    const devEffortByUser = calculateEffortByUser(
-      task.effortBase,
-      task.assignedUsers,
-      devTeam.users
-    );
+  // Get all unique developers across all tasks
+  const allDevelopers = new Set<string>();
+  tasks.forEach((task) => {
+    task.assignedUsers.forEach((user) => allDevelopers.add(user));
+  });
 
-    // Get enabled teams for this task
-    const enabledTeams = teams.filter((t) => t.id !== 'dev' && task.teamEfforts[t.id]?.enabled);
+  // FOR EACH DEVELOPER, process their tasks in the order they appear in the input
+  allDevelopers.forEach((userName) => {
+    // Get tasks assigned to this developer in input order
+    const developerTasks = tasks.filter((task) => task.assignedUsers.includes(userName));
 
-    // FOR EACH DEVELOPER, create their complete workflow (dev → reviews → corrections)
-    task.assignedUsers.forEach((userName) => {
+    // Process each task for this developer
+    developerTasks.forEach((task, taskIndex) => {
+      // Get enabled teams for this task
+      const enabledTeams = teams.filter((t) => t.id !== 'dev' && task.teamEfforts[t.id]?.enabled);
+
+      const devEffortByUser = calculateEffortByUser(
+        task.effortBase,
+        task.assignedUsers,
+        devTeam.users
+      );
+
+      // Find original index in tasks array
+      const originalTaskIndex = tasks.indexOf(task);
       const devTaskId = `${task.code}-dev-${userName.replace(/\s+/g, '-')}`;
 
       // Create development task
@@ -141,7 +151,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         }
       }
     });
-  }
+  });
 
   return expandedTasks;
 }
