@@ -20,6 +20,7 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
   // Track round-robin index per team for fair distribution
+  // Increment based on ORIGINAL TASK ORDER (not per-developer order)
   const teamRoundRobinIndex = new Map<string, number>();
   teams.forEach((team) => {
     teamRoundRobinIndex.set(team.id, 0);
@@ -34,6 +35,42 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
   const allDevelopers = new Set<string>();
   tasks.forEach((task) => {
     task.assignedUsers.forEach((user) => allDevelopers.add(user));
+  });
+
+  // Create a map to track round-robin assignment per ORIGINAL task
+  // This ensures fair distribution across all tasks, not per-developer
+  const taskReviewerAssignment = new Map<string, Map<string, string>>();
+
+  // Pre-assign reviewers for all tasks in file order
+  tasks.forEach((task) => {
+    const taskAssignments = new Map<string, string>();
+
+    teams.forEach((team) => {
+      if (team.id === 'dev') return;
+
+      const teamEffort = task.teamEfforts[team.id];
+      if (!teamEffort?.enabled) return;
+
+      // Get reviewers for this team
+      let reviewers: string[] = [];
+      if (teamEffort.reviewAssignedUsers && teamEffort.reviewAssignedUsers.length > 0) {
+        reviewers = teamEffort.reviewAssignedUsers;
+      } else if (team.users.length > 0) {
+        reviewers = team.users.map((u) => u.name);
+      }
+
+      // Auto-assign reviewer using round-robin
+      if (reviewers.length > 0) {
+        const currentIndex = teamRoundRobinIndex.get(team.id) || 0;
+        const assignedReviewer = reviewers[currentIndex % reviewers.length];
+        taskAssignments.set(team.id, assignedReviewer);
+
+        // Increment round-robin for next TASK (not per developer)
+        teamRoundRobinIndex.set(team.id, currentIndex + 1);
+      }
+    });
+
+    taskReviewerAssignment.set(task.id, taskAssignments);
   });
 
   // FOR EACH DEVELOPER, process their tasks by priority first, then file order
@@ -91,22 +128,9 @@ export function expandTasksWithTeams(tasks: Task[], teams: Team[]): Task[] {
         // For this developer, create a review task
         const reviewTaskId = `${task.code}-${team.id}-review-${userName.replace(/\s+/g, '-')}`;
 
-        // Get reviewers for this review task (from team or auto-assign)
-        let reviewers: string[] = [];
-        if (teamEffort.reviewAssignedUsers && teamEffort.reviewAssignedUsers.length > 0) {
-          reviewers = teamEffort.reviewAssignedUsers;
-        } else if (team.users.length > 0) {
-          reviewers = team.users.map((u) => u.name);
-        }
-
-        // Auto-assign reviewer using round-robin to distribute workload
-        let assignedReviewer = userName; // Fallback to dev if no reviewers
-        if (reviewers.length > 0) {
-          const currentIndex = teamRoundRobinIndex.get(team.id) || 0;
-          assignedReviewer = reviewers[currentIndex % reviewers.length];
-          // Increment round-robin index for next assignment
-          teamRoundRobinIndex.set(team.id, currentIndex + 1);
-        }
+        // Get pre-assigned reviewer for this task (calculated in file order)
+        const taskAssignments = taskReviewerAssignment.get(task.id);
+        let assignedReviewer = taskAssignments?.get(team.id) || userName; // Fallback to dev if no reviewers
 
         expandedTasks.push({
           ...task,
